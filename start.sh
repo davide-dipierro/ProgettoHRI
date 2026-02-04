@@ -23,6 +23,14 @@ echo "  - NAO IP: $NAO_IP:$NAO_PORT"
 echo "  - Directory: $PROJECT_DIR"
 echo ""
 
+# Attiva venv
+if [ -d "$PROJECT_DIR/.venv" ]; then
+    source "$PROJECT_DIR/.venv/bin/activate"
+    echo "✓ Virtual environment attivato"
+else
+    echo "⚠️  Virtual environment non trovato. Usa Python di sistema."
+fi
+
 # Verifica Python
 if ! command -v python3 &> /dev/null; then
     echo "❌ Errore: python3 non trovato!"
@@ -32,7 +40,7 @@ fi
 # Verifica Flask
 if ! python3 -c "import flask" 2>/dev/null; then
     echo "⚠️  Flask non trovato. Installazione..."
-    pip3 install flask
+    pip install flask
 fi
 
 # Crea cartella dati se non esiste
