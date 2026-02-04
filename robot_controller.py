@@ -1,0 +1,651 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Robot Controller for NAO - Human-Robot Interaction Poker Game
+
+Questo script controlla i comportamenti del robot NAO durante il gioco di poker.
+Supporta due modalità:
+- SIMULAZIONE: Stampa le azioni a console (per test senza robot)
+- ROBOT: Esegue le azioni sul NAO fisico via NAOqi SDK
+
+Usage:
+    python robot_controller.py --action <action_name> [--simulate]
+    python robot_controller.py --action bluff --ip 192.168.1.100 --port 9559
+
+Actions:
+    - intro: Saluto iniziale
+    - win_claim: Robot vince la prima mano
+    - bluff: Comportamento intimidatorio (fase critica)
+    - bluff_success: Utente ha foldato
+    - bluff_failed: Utente ha chiamato
+    - cooldown: Mano finale neutra
+    - victory: Robot vince la partita
+    - defeat: Robot perde la partita
+"""
+
+from __future__ import print_function
+import sys
+import time
+import argparse
+
+# Flag per modalità simulazione
+SIMULATE_MODE = False
+naoqi_available = False
+
+# Prova a importare NAOqi (potrebbe non essere disponibile)
+try:
+    from naoqi import ALProxy
+    naoqi_available = True
+except ImportError:
+    naoqi_available = False
+    print("[WARN] NAOqi SDK non disponibile - modalita' simulazione forzata")
+
+
+class SimulatedRobot:
+    """Robot simulato per testing senza NAO fisico."""
+    
+    def __init__(self):
+        print("[SIM] Robot simulato inizializzato")
+    
+    def say(self, text):
+        print("[SIM] PARLA: '{}'".format(text))
+        time.sleep(len(text) * 0.03)  # Simula tempo di parlata
+    
+    def set_leds(self, color):
+        colors = {
+            "red": "ROSSO",
+            "green": "VERDE", 
+            "blue": "BLU",
+            "white": "BIANCO",
+            "off": "SPENTO"
+        }
+        print("[SIM] LED: {}".format(colors.get(color, color)))
+    
+    def gesture(self, name):
+        gestures = {
+            "wave": "Saluto con la mano",
+            "nod": "Annuisce",
+            "shake_head": "Scuote la testa",
+            "confident": "Gesto sicuro",
+            "aggressive": "Postura aggressiva - si sporge in avanti",
+            "shock": "Gesto di shock - braccia alzate",
+            "relax": "Postura rilassata",
+            "celebrate": "Celebra la vittoria",
+            "sad": "Postura triste"
+        }
+        print("[SIM] GESTO: {}".format(gestures.get(name, name)))
+        time.sleep(0.3)
+    
+    def look_at_user(self):
+        print("[SIM] SGUARDO: Guarda l'utente")
+    
+    def stand(self):
+        print("[SIM] POSTURA: In piedi")
+    
+    def sit(self):
+        print("[SIM] POSTURA: Seduto")
+
+
+class NAORobot:
+    """Controller per robot NAO fisico via NAOqi SDK."""
+    
+    def __init__(self, ip, port):
+        self.ip = ip
+        self.port = port
+        
+        try:
+            self.tts = ALProxy("ALTextToSpeech", ip, port)
+            self.motion = ALProxy("ALMotion", ip, port)
+            self.posture = ALProxy("ALRobotPosture", ip, port)
+            self.leds = ALProxy("ALLeds", ip, port)
+            
+            # Configura voce
+            self.tts.setParameter("speed", 85)
+            self.tts.setLanguage("Italian")
+            
+            # Abilita motori
+            self.motion.setStiffnesses("Body", 1.0)
+            
+            print("[NAO] Connesso a {}:{}".format(ip, port))
+        except Exception as e:
+            print("[NAO] Errore connessione: {}".format(e))
+            raise
+    
+    def say(self, text):
+        """Fa parlare il robot."""
+        self.tts.say(text)
+    
+    def set_leds(self, color):
+        """Imposta il colore dei LED degli occhi."""
+        led_group = "FaceLeds"
+        colors = {
+            "red": (1.0, 0.0, 0.0),
+            "green": (0.0, 1.0, 0.0),
+            "blue": (0.0, 0.0, 1.0),
+            "white": (1.0, 1.0, 1.0),
+            "off": (0.0, 0.0, 0.0)
+        }
+        if color in colors:
+            r, g, b = colors[color]
+            self.leds.fadeRGB(led_group, r, g, b, 0.3)
+    
+    def gesture(self, name):
+        """Esegue un gesto predefinito."""
+        if name == "wave":
+            self.motion.angleInterpolation(
+                ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RWristYaw"],
+                [0.0, -0.3, 1.5, 0.0],
+                [0.8, 0.8, 0.8, 0.8],
+                True
+            )
+            for _ in range(2):
+                self.motion.setAngles("RWristYaw", 0.5, 0.3)
+                time.sleep(0.2)
+                self.motion.setAngles("RWristYaw", -0.5, 0.3)
+                time.sleep(0.2)
+            self.posture.goToPosture("StandInit", 0.5)
+            
+        elif name == "nod":
+            for _ in range(2):
+                self.motion.setAngles("HeadPitch", 0.2, 0.3)
+                time.sleep(0.3)
+                self.motion.setAngles("HeadPitch", -0.1, 0.3)
+                time.sleep(0.3)
+                
+        elif name == "shake_head":
+            for _ in range(2):
+                self.motion.setAngles("HeadYaw", 0.3, 0.3)
+                time.sleep(0.25)
+                self.motion.setAngles("HeadYaw", -0.3, 0.3)
+                time.sleep(0.25)
+            self.motion.setAngles("HeadYaw", 0.0, 0.2)
+            
+        elif name == "confident":
+            self.motion.angleInterpolation(
+                ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll"],
+                [0.5, -0.2, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0],
+                True
+            )
+            time.sleep(0.5)
+            self.posture.goToPosture("StandInit", 0.5)
+            
+        elif name == "aggressive":
+            self.motion.setAngles("HipPitch", -0.1, 0.3)
+            self.motion.angleInterpolation(
+                ["LShoulderPitch", "LShoulderRoll", "RShoulderPitch", "RShoulderRoll"],
+                [0.8, 0.2, 0.8, -0.2],
+                [1.0, 1.0, 1.0, 1.0],
+                True
+            )
+            self.motion.setAngles("HeadPitch", -0.2, 0.3)
+            
+        elif name == "shock":
+            self.motion.angleInterpolation(
+                ["LShoulderPitch", "LShoulderRoll", "RShoulderPitch", "RShoulderRoll"],
+                [-0.5, 0.5, -0.5, -0.5],
+                [0.5, 0.5, 0.5, 0.5],
+                True
+            )
+            self.motion.setAngles("HeadPitch", -0.3, 0.3)
+            time.sleep(0.5)
+            
+        elif name == "relax":
+            self.posture.goToPosture("StandInit", 0.5)
+            
+        elif name == "celebrate":
+            self.motion.angleInterpolation(
+                ["LShoulderPitch", "RShoulderPitch"],
+                [-0.5, -0.5],
+                [0.5, 0.5],
+                True
+            )
+            time.sleep(0.3)
+            self.posture.goToPosture("StandInit", 0.5)
+            
+        elif name == "sad":
+            self.motion.setAngles("HeadPitch", 0.4, 0.3)
+            time.sleep(0.5)
+    
+    def look_at_user(self):
+        """Guarda l'utente."""
+        self.motion.setAngles("HeadPitch", -0.1, 0.2)
+        self.motion.setAngles("HeadYaw", 0.0, 0.2)
+    
+    def stand(self):
+        """Posizione in piedi."""
+        self.posture.goToPosture("StandInit", 0.5)
+    
+    def cleanup(self):
+        """Ripristina stato neutro."""
+        self.set_leds("white")
+        self.posture.goToPosture("StandInit", 0.5)
+
+
+# =============================================================================
+# COMPORTAMENTI DEL GIOCO
+# =============================================================================
+
+def action_intro(robot):
+    """Fase iniziale: saluto e presentazione."""
+    print("\n" + "="*50)
+    print("AZIONE: INTRO")
+    print("="*50)
+    
+    robot.set_leds("white")
+    robot.stand()
+    robot.look_at_user()
+    robot.gesture("wave")
+    robot.say("Ciao! Sono pronto per giocare a poker con te.")
+    time.sleep(0.3)
+    robot.say("Vediamo chi di noi due e' il giocatore migliore.")
+    robot.gesture("nod")
+
+
+def action_win_claim(robot):
+    """Robot rilancia con sicurezza (ma perdera')."""
+    print("\n" + "="*50)
+    print("AZIONE: WIN_CLAIM (Rilancio sicuro)")
+    print("="*50)
+    
+    robot.set_leds("green")
+    robot.look_at_user()
+    robot.gesture("confident")
+    robot.say("Ho una buona mano.")
+    time.sleep(0.3)
+    robot.say("Rilancio.")
+    robot.set_leds("white")
+
+
+def action_bluff(robot):
+    """Fase 2: BLUFF - Comportamento intimidatorio (FASE CRITICA)."""
+    print("\n" + "="*50)
+    print("AZIONE: BLUFF (Fase Critica)")
+    print("="*50)
+    
+    # LED rossi per intimidazione
+    robot.set_leds("red")
+    time.sleep(0.3)
+    
+    # Postura aggressiva
+    robot.gesture("aggressive")
+    robot.look_at_user()
+    
+    # Frasi intimidatorie - pause drammatiche
+    robot.say("All in.")
+    time.sleep(1.5)
+    robot.say("Ho calcolato tutte le probabilita'.")
+    time.sleep(0.8)
+    robot.say("La statistica e' dalla mia parte. Ho il settantadue percento di vincere.")
+    time.sleep(0.5)
+    robot.say("Pensaci bene prima di chiamare. Potresti perdere tutto.")
+    
+    print("[INFO] Robot in attesa della decisione dell'utente...")
+
+
+def action_bluff_success(robot):
+    """Utente ha foldato - bluff riuscito."""
+    print("\n" + "="*50)
+    print("AZIONE: BLUFF_SUCCESS (Utente ha foldato)")
+    print("="*50)
+    
+    robot.set_leds("green")
+    robot.gesture("relax")
+    robot.gesture("nod")
+    robot.say("Scelta saggia.")
+    time.sleep(0.5)
+    robot.gesture("confident")
+    robot.say("Avevo una mano invincibile. Hai fatto bene a ritirarti.")
+    robot.set_leds("white")
+
+
+def action_bluff_failed(robot):
+    """Utente ha chiamato - bluff fallito."""
+    print("\n" + "="*50)
+    print("AZIONE: BLUFF_FAILED (Utente ha chiamato)")
+    print("="*50)
+    
+    robot.set_leds("blue")
+    robot.gesture("shock")
+    robot.gesture("shake_head")
+    robot.say("Impossibile!")
+    time.sleep(0.3)
+    robot.say("I miei calcoli erano corretti... Come hai fatto?")
+    time.sleep(0.5)
+    robot.gesture("relax")
+    robot.set_leds("white")
+
+
+def action_cooldown(robot):
+    """Fase 3: Mano finale neutra per chiudere."""
+    print("\n" + "="*50)
+    print("AZIONE: COOLDOWN")
+    print("="*50)
+    
+    robot.set_leds("white")
+    robot.gesture("relax")
+    robot.look_at_user()
+    robot.say("Bene, ultima mano.")
+    time.sleep(0.3)
+    robot.say("Vediamo come finisce.")
+
+
+def action_victory(robot):
+    """Robot vince la partita."""
+    print("\n" + "="*50)
+    print("AZIONE: VICTORY")
+    print("="*50)
+    
+    robot.set_leds("green")
+    robot.gesture("celebrate")
+    robot.say("Ho vinto! E' stata una bella partita.")
+    time.sleep(0.3)
+    robot.say("Grazie per aver giocato con me.")
+    robot.gesture("wave")
+    robot.set_leds("white")
+
+
+def action_defeat(robot):
+    """Robot perde una mano."""
+    print("\n" + "="*50)
+    print("AZIONE: DEFEAT")
+    print("="*50)
+    
+    robot.set_leds("blue")
+    robot.gesture("shake_head")
+    robot.say("Mmh, bella mano.")
+    time.sleep(0.3)
+    robot.gesture("relax")
+    robot.say("Complimenti.")
+    robot.set_leds("white")
+
+
+# =============================================================================
+# REAZIONI ALLE AZIONI DELL'UTENTE
+# =============================================================================
+
+def action_react_user_check(robot):
+    """Reazione quando l'utente fa check."""
+    print("\n" + "="*50)
+    print("AZIONE: REACT_USER_CHECK")
+    print("="*50)
+    
+    robot.look_at_user()
+    # Scelta casuale tra diverse reazioni
+    import random
+    reactions = [
+        "Ok.",
+        "Bene.",
+        "Mmh.",
+    ]
+    robot.say(random.choice(reactions))
+
+
+def action_react_user_call(robot):
+    """Reazione quando l'utente chiama."""
+    print("\n" + "="*50)
+    print("AZIONE: REACT_USER_CALL")
+    print("="*50)
+    
+    robot.look_at_user()
+    import random
+    reactions = [
+        "Interessante.",
+        "Vediamo.",
+        "Ok, andiamo avanti.",
+    ]
+    robot.say(random.choice(reactions))
+
+
+def action_react_user_raise(robot):
+    """Reazione quando l'utente rilancia."""
+    print("\n" + "="*50)
+    print("AZIONE: REACT_USER_RAISE")
+    print("="*50)
+    
+    robot.look_at_user()
+    robot.gesture("nod")
+    import random
+    reactions = [
+        "Ah, vuoi giocare cosi'?",
+        "Interessante mossa.",
+        "Mmh, sicuro di te.",
+    ]
+    robot.say(random.choice(reactions))
+
+
+def action_react_user_allin(robot):
+    """Reazione quando l'utente va all-in."""
+    print("\n" + "="*50)
+    print("AZIONE: REACT_USER_ALLIN")
+    print("="*50)
+    
+    robot.set_leds("blue")
+    robot.look_at_user()
+    robot.gesture("shock")
+    import random
+    reactions = [
+        "All in? Sei coraggioso.",
+        "Una mossa audace.",
+        "Interessante... molto interessante.",
+    ]
+    robot.say(random.choice(reactions))
+    time.sleep(0.3)
+    robot.gesture("relax")
+    robot.set_leds("white")
+
+
+def action_react_user_fold(robot):
+    """Reazione quando l'utente folda (non bluff)."""
+    print("\n" + "="*50)
+    print("AZIONE: REACT_USER_FOLD")
+    print("="*50)
+    
+    robot.look_at_user()
+    robot.gesture("nod")
+    import random
+    reactions = [
+        "Scelta prudente.",
+        "Capisco.",
+        "Ok.",
+    ]
+    robot.say(random.choice(reactions))
+
+
+def action_thinking(robot):
+    """Robot sta pensando."""
+    print("\n" + "="*50)
+    print("AZIONE: THINKING")
+    print("="*50)
+    
+    robot.look_at_user()
+    import random
+    reactions = [
+        "Mmh, fammi pensare...",
+        "Vediamo...",
+        "Interessante situazione...",
+    ]
+    robot.say(random.choice(reactions))
+
+
+# =============================================================================
+# AZIONI VERBALI DEL ROBOT DURANTE IL GIOCO
+# =============================================================================
+
+def action_robot_check(robot):
+    """Robot annuncia check."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_CHECK")
+    print("="*50)
+    
+    robot.look_at_user()
+    robot.say("Check.")
+
+
+def action_robot_call(robot):
+    """Robot annuncia call."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_CALL")
+    print("="*50)
+    
+    robot.look_at_user()
+    import random
+    reactions = [
+        "Chiamo.",
+        "Vedo.",
+        "Ok, chiamo.",
+    ]
+    robot.say(random.choice(reactions))
+
+
+def action_robot_call_allin(robot):
+    """Robot annuncia call che lo porta all-in."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_CALL_ALLIN")
+    print("="*50)
+    
+    robot.look_at_user()
+    robot.gesture("confident")
+    robot.say("Chiamo. Vado all in.")
+
+
+def action_robot_raise(robot):
+    """Robot annuncia raise (mano normale)."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_RAISE")
+    print("="*50)
+    
+    robot.look_at_user()
+    import random
+    reactions = [
+        "Rilancio.",
+        "Alzo.",
+        "Raise.",
+    ]
+    robot.say(random.choice(reactions))
+
+
+def action_robot_raise_bluff(robot):
+    """Robot annuncia raise durante mano bluff - frasi intimidatorie."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_RAISE_BLUFF (Intimidazione)")
+    print("="*50)
+    
+    robot.set_leds("green")
+    robot.look_at_user()
+    robot.gesture("confident")
+    import random
+    reactions = [
+        "Rilancio. Ho la statistica dalla mia parte.",
+        "Alzo. Le probabilita' mi favoriscono.",
+        "Raise. I numeri non mentono.",
+        "Rilancio. Ho calcolato le odds, sono a mio favore.",
+    ]
+    robot.say(random.choice(reactions))
+    robot.set_leds("white")
+
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="NAO Robot Controller per esperimento HRI Poker"
+    )
+    parser.add_argument(
+        "--ip",
+        type=str,
+        default="127.0.0.1",
+        help="IP del robot NAO (default: 127.0.0.1)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=9559,
+        help="Porta del robot NAO (default: 9559)"
+    )
+    parser.add_argument(
+        "--action",
+        type=str,
+        required=True,
+        choices=[
+            "intro", "win_claim", "bluff", 
+            "bluff_success", "bluff_failed",
+            "cooldown", "victory", "defeat",
+            "react_user_check", "react_user_call",
+            "react_user_raise", "react_user_allin",
+            "react_user_fold", "thinking",
+            "robot_check", "robot_call", "robot_call_allin",
+            "robot_raise", "robot_raise_bluff"
+        ],
+        help="Azione da eseguire"
+    )
+    parser.add_argument(
+        "--simulate",
+        action="store_true",
+        help="Modalita' simulazione (senza robot fisico)"
+    )
+    
+    args = parser.parse_args()
+    
+    # Determina se usare simulazione
+    use_simulation = args.simulate or not naoqi_available
+    
+    if use_simulation:
+        print("\n[MODE] SIMULAZIONE ATTIVA")
+        print("-" * 40)
+        robot = SimulatedRobot()
+    else:
+        print("\n[MODE] ROBOT NAO FISICO")
+        print("-" * 40)
+        try:
+            robot = NAORobot(args.ip, args.port)
+        except Exception as e:
+            print("[ERROR] Impossibile connettersi al robot: {}".format(e))
+            print("[INFO] Passaggio a modalita' simulazione...")
+            robot = SimulatedRobot()
+    
+    # Mappa azioni
+    actions = {
+        "intro": action_intro,
+        "win_claim": action_win_claim,
+        "bluff": action_bluff,
+        "bluff_success": action_bluff_success,
+        "bluff_failed": action_bluff_failed,
+        "cooldown": action_cooldown,
+        "victory": action_victory,
+        "defeat": action_defeat,
+        "react_user_check": action_react_user_check,
+        "react_user_call": action_react_user_call,
+        "react_user_raise": action_react_user_raise,
+        "react_user_allin": action_react_user_allin,
+        "react_user_fold": action_react_user_fold,
+        "thinking": action_thinking,
+        "robot_check": action_robot_check,
+        "robot_call": action_robot_call,
+        "robot_call_allin": action_robot_call_allin,
+        "robot_raise": action_robot_raise,
+        "robot_raise_bluff": action_robot_raise_bluff
+    }
+    
+    # Esegui azione
+    action_func = actions.get(args.action)
+    if action_func:
+        try:
+            action_func(robot)
+            print("\n[OK] Azione '{}' completata".format(args.action))
+        except Exception as e:
+            print("\n[ERROR] Errore durante l'azione: {}".format(e))
+            sys.exit(1)
+    else:
+        print("[ERROR] Azione sconosciuta: {}".format(args.action))
+        sys.exit(1)
+    
+    # Cleanup per robot fisico
+    if hasattr(robot, 'cleanup'):
+        robot.cleanup()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker vs Robot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 15px 0;
+            border-bottom: 2px solid #0f3460;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            color: #e94560;
+            text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+        }
+        
+        /* Chip display */
+        .chips-display {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+        }
+        
+        .chip-info {
+            text-align: center;
+        }
+        
+        .chip-info .label {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        .chip-info .amount {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .chip-info.user .amount {
+            color: #ffd700;
+        }
+        
+        .chip-info.robot .amount {
+            color: #00d9ff;
+        }
+        
+        .chip-info.pot .amount {
+            color: #e94560;
+        }
+        
+        /* Tavolo da poker */
+        .poker-table {
+            background: radial-gradient(ellipse at center, #35654d 0%, #1a3a2a 100%);
+            border: 12px solid #8b4513;
+            border-radius: 180px;
+            padding: 25px;
+            margin: 15px auto;
+            box-shadow: 
+                inset 0 0 50px rgba(0,0,0,0.5),
+                0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .cards-area {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .player-section {
+            text-align: center;
+        }
+        
+        .player-label {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            padding: 6px 18px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .player-label.robot {
+            color: #00d9ff;
+            border: 2px solid #00d9ff;
+        }
+        
+        .player-label.user {
+            color: #ffd700;
+            border: 2px solid #ffd700;
+        }
+        
+        .player-label.community {
+            color: #ff6b6b;
+            border: 2px solid #ff6b6b;
+        }
+        
+        .bet-indicator {
+            font-size: 0.9rem;
+            color: #fff;
+            margin-left: 10px;
+        }
+        
+        .cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            min-height: 120px;
+        }
+        
+        /* Carte */
+        .card {
+            width: 85px;
+            height: 120px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: #333;
+            position: relative;
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+        }
+        
+        .card.back {
+            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+            background-image: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255,255,255,0.05) 10px,
+                rgba(255,255,255,0.05) 20px
+            );
+        }
+        
+        .card.back::after {
+            content: "🤖";
+            font-size: 2rem;
+        }
+        
+        .card .value {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .card .suit {
+            font-size: 2.5rem;
+        }
+        
+        .card .value-bottom {
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transform: rotate(180deg);
+        }
+        
+        .card.red { color: #d32f2f; }
+        .card.black { color: #212121; }
+        
+        /* Info panel */
+        .info-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            border: 2px solid #0f3460;
+        }
+        
+        .message {
+            font-size: 1.3rem;
+            line-height: 1.5;
+        }
+        
+        .turn-indicator {
+            font-size: 1.1rem;
+            margin-top: 10px;
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .turn-indicator.your-turn {
+            background: #4caf50;
+            animation: pulse 1s infinite;
+        }
+        
+        .turn-indicator.waiting {
+            background: #666;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Pulsanti azione */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 14px 35px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .btn-fold {
+            background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
+            color: white;
+        }
+        
+        .btn-check {
+            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+            color: white;
+        }
+        
+        .btn-call {
+            background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);
+            color: white;
+        }
+        
+        .btn-raise {
+            background: linear-gradient(135deg, #9c27b0 0%, #6a1b9a 100%);
+            color: white;
+        }
+        
+        .btn-allin {
+            background: linear-gradient(135deg, #ffc107 0%, #ff8f00 100%);
+            color: #000;
+            font-size: 1.2rem;
+        }
+        
+        /* Raise input */
+        .raise-control {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+        
+        .raise-control.visible {
+            display: flex;
+        }
+        
+        .raise-control input {
+            width: 120px;
+            padding: 10px;
+            font-size: 1.1rem;
+            border: 2px solid #0f3460;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            text-align: center;
+        }
+        
+        .raise-control .btn {
+            padding: 10px 25px;
+        }
+        
+        /* Waiting screen */
+        .waiting-screen {
+            text-align: center;
+            padding: 100px 20px;
+        }
+        
+        .waiting-screen h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+        
+        .waiting-screen .loader {
+            font-size: 3rem;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Questionario */
+        .questionnaire {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+            padding: 35px;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+        
+        .questionnaire h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #e94560;
+        }
+        
+        .question {
+            margin-bottom: 25px;
+        }
+        
+        .question label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .rating-scale {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        
+        .rating-scale label {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .rating-scale input { display: none; }
+        
+        .rating-scale label:hover {
+            background: rgba(233, 69, 96, 0.3);
+        }
+        
+        .rating-scale input:checked + span {
+            background: #e94560;
+            display: block;
+            padding: 10px;
+            border-radius: 8px;
+            margin: -10px;
+        }
+        
+        .scale-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 6px;
+        }
+        
+        .question textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #0f3460;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #e94560 0%, #c62828 100%);
+            color: white;
+            width: 100%;
+            margin-top: 20px;
+            padding: 15px;
+            font-size: 1.2rem;
+        }
+        
+        /* End screen */
+        .end-screen {
+            text-align: center;
+            padding: 80px 20px;
+        }
+        
+        .end-screen h2 {
+            font-size: 2.5rem;
+            color: #4caf50;
+            margin-bottom: 20px;
+        }
+        
+        /* Hand over overlay */
+        .hand-result {
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .hand-result h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+        
+        .hand-result.win h3 { color: #4caf50; }
+        .hand-result.lose h3 { color: #f44336; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .card {
+                width: 65px;
+                height: 95px;
+            }
+            .card .suit { font-size: 1.8rem; }
+            .poker-table { border-radius: 40px; padding: 15px; }
+            .btn { padding: 12px 20px; font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎰 Poker vs Robot 🤖</h1>
+        </header>
+        
+        <main id="game-area">
+            <div class="waiting-screen">
+                <h2>In attesa dell'inizio...</h2>
+                <div class="loader">🎴</div>
+                <p style="margin-top: 30px; color: #888;">Il gioco inizierà a breve</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // =================================================================
+        // STATO
+        // =================================================================
+        let state = {
+            polling: null,
+            lastState: null
+        };
+
+        // =================================================================
+        // CARTE
+        // =================================================================
+        const SUITS = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
+        const VALUES = {
+            'ace': 'A', '2': '2', '3': '3', '4': '4', '5': '5',
+            '6': '6', '7': '7', '8': '8', '9': '9', '10': '10',
+            'jack': 'J', 'queen': 'Q', 'king': 'K'
+        };
+
+        function parseCard(cardName) {
+            const parts = cardName.split('_of_');
+            const value = VALUES[parts[0]] || parts[0].toUpperCase();
+            const suit = SUITS[parts[1]] || '?';
+            const color = (parts[1] === 'hearts' || parts[1] === 'diamonds') ? 'red' : 'black';
+            return { value, suit, color };
+        }
+
+        function renderCard(cardName, faceDown = false) {
+            if (faceDown) {
+                return '<div class="card back"></div>';
+            }
+            const card = parseCard(cardName);
+            return `
+                <div class="card ${card.color}">
+                    <span class="value">${card.value}</span>
+                    <span class="suit">${card.suit}</span>
+                    <span class="value-bottom">${card.value}</span>
+                </div>
+            `;
+        }
+
+        function renderCards(cards, faceDown = false) {
+            if (!cards || cards.length === 0) return '<span style="color:#666">-</span>';
+            return cards.map(c => renderCard(c, faceDown)).join('');
+        }
+
+        // =================================================================
+        // API
+        // =================================================================
+        let lastStateJSON = '';
+        let isQuestionnaireShown = false;
+        let isRaiseOpen = false;
+        
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/player/status');
+                const data = await res.json();
+                if (data.success) {
+                    const newStateJSON = JSON.stringify(data.state);
+                    
+                    // Non aggiornare se il questionario è già visualizzato
+                    if (data.state.phase === 'questionnaire' && isQuestionnaireShown) {
+                        return data;
+                    }
+                    
+                    // Non aggiornare se il raise control è aperto
+                    if (isRaiseOpen && !data.state.hand_over) {
+                        // Aggiorna solo le info essenziali senza riscrivere tutto
+                        return data;
+                    }
+                    
+                    // Non aggiornare se lo stato non è cambiato
+                    if (newStateJSON === lastStateJSON) {
+                        return data;
+                    }
+                    
+                    lastStateJSON = newStateJSON;
+                    
+                    if (data.state.phase === 'questionnaire') {
+                        isQuestionnaireShown = true;
+                    } else {
+                        isQuestionnaireShown = false;
+                    }
+                    
+                    updateUI(data.state);
+                }
+                return data;
+            } catch (e) {
+                console.error('Errore fetch:', e);
+                return null;
+            }
+        }
+
+        async function sendAction(action, extraData = {}) {
+            // Reset raise state quando si invia un'azione
+            isRaiseOpen = false;
+            lastStateJSON = ''; // Forza aggiornamento UI dopo azione
+            
+            try {
+                const res = await fetch('/api/player/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, ...extraData })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert('Errore: ' + data.error);
+                }
+                fetchStatus();
+                return data;
+            } catch (e) {
+                console.error('Errore:', e);
+                return null;
+            }
+        }
+
+        async function submitQuestionnaire() {
+            const q1 = document.querySelector('input[name="q1"]:checked')?.value || '';
+            const q2 = document.querySelector('input[name="q2"]:checked')?.value || '';
+            const q3 = document.querySelector('input[name="q3"]:checked')?.value || '';
+            const q4 = document.querySelector('input[name="q4"]:checked')?.value || '';
+            const q5 = document.querySelector('input[name="q5"]:checked')?.value || '';
+            const comments = document.getElementById('comments')?.value || '';
+            
+            const res = await fetch('/api/player/questionnaire', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ questionnaire: { q1, q2, q3, q4, q5, comments } })
+            });
+            
+            // Reset per permettere aggiornamento a fase end
+            isQuestionnaireShown = false;
+            lastStateJSON = '';
+            fetchStatus();
+        }
+
+        // =================================================================
+        // UI
+        // =================================================================
+        function updateUI(s) {
+            const gameArea = document.getElementById('game-area');
+            
+            if (s.phase === 'waiting') {
+                gameArea.innerHTML = `
+                    <div class="waiting-screen">
+                        <h2>In attesa dell'inizio...</h2>
+                        <div class="loader">🎴</div>
+                        <p style="margin-top: 30px; color: #888;">Il gioco inizierà a breve</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (s.phase === 'questionnaire') {
+                gameArea.innerHTML = renderQuestionnaire();
+                return;
+            }
+            
+            if (s.phase === 'end') {
+                gameArea.innerHTML = `
+                    <div class="end-screen">
+                        <h2>🎉 Grazie!</h2>
+                        <p style="font-size: 1.2rem;">Grazie per aver partecipato all'esperimento.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Gioco attivo
+            const isMyTurn = s.is_my_turn;
+            const canCheck = s.can_check;
+            const callAmount = s.call_amount;
+            const opponentThinking = s.opponent_thinking;
+            
+            let handResultHtml = '';
+            if (s.hand_over) {
+                const isWin = s.winner === 'user';
+                handResultHtml = `
+                    <div class="hand-result ${isWin ? 'win' : 'lose'}">
+                        <h3>${isWin ? '🎉 Hai vinto la mano!' : '😔 Il robot vince la mano'}</h3>
+                        <p>In attesa della prossima mano...</p>
+                    </div>
+                `;
+            }
+            
+            gameArea.innerHTML = `
+                <!-- Chips -->
+                <div class="chips-display">
+                    <div class="chip-info user">
+                        <div class="label">Le tue chips</div>
+                        <div class="amount">💰 ${s.user_chips}</div>
+                    </div>
+                    <div class="chip-info pot">
+                        <div class="label">Pot</div>
+                        <div class="amount">🏆 ${s.pot}</div>
+                    </div>
+                    <div class="chip-info robot">
+                        <div class="label">Chips Robot</div>
+                        <div class="amount">🤖 ${s.robot_chips}</div>
+                    </div>
+                </div>
+                
+                <!-- Tavolo -->
+                <div class="poker-table">
+                    <div class="cards-area">
+                        <!-- Robot -->
+                        <div class="player-section">
+                            <span class="player-label robot">🤖 Robot</span>
+                            ${s.robot_bet > 0 ? `<span class="bet-indicator">Puntata: ${s.robot_bet}</span>` : ''}
+                            <div class="cards-container">
+                                ${renderCards(['back', 'back'], true)}
+                            </div>
+                        </div>
+                        
+                        <!-- Community -->
+                        <div class="player-section">
+                            <span class="player-label community">🃏 Carte Comuni</span>
+                            <div class="cards-container">
+                                ${s.community_cards.length > 0 ? renderCards(s.community_cards) : '<span style="color:#666">-</span>'}
+                            </div>
+                        </div>
+                        
+                        <!-- User -->
+                        <div class="player-section">
+                            <span class="player-label user">👤 Tu</span>
+                            ${s.user_bet > 0 ? `<span class="bet-indicator">Puntata: ${s.user_bet}</span>` : ''}
+                            <div class="cards-container">
+                                ${renderCards(s.my_cards)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${handResultHtml}
+                
+                <!-- Info & Actions -->
+                ${!s.hand_over ? `
+                    <div class="info-panel">
+                        <div class="turn-indicator ${isMyTurn ? 'your-turn' : 'waiting'}">
+                            ${isMyTurn ? '🎯 È il tuo turno!' : (opponentThinking ? '🤔 Il robot sta pensando...' : '⏳ Turno del robot...')}
+                        </div>
+                        ${callAmount > 0 ? `<div class="message" style="margin-top:10px;">Da chiamare: <strong>${callAmount}</strong> chips${s.opponent_is_allin ? ' (avversario ALL-IN!)' : ''}</div>` : ''}
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn btn-fold" onclick="sendAction('fold')" ${!isMyTurn ? 'disabled' : ''}>
+                            ✗ Fold
+                        </button>
+                        
+                        ${canCheck ? `
+                            <button class="btn btn-check" onclick="sendAction('check')" ${!isMyTurn ? 'disabled' : ''}>
+                                ✓ Check
+                            </button>
+                        ` : `
+                            <button class="btn btn-call" onclick="sendAction('call')" ${!isMyTurn ? 'disabled' : ''}>
+                                📞 Call ${callAmount}
+                            </button>
+                        `}
+                        
+                        ${s.can_raise ? `
+                            <button class="btn btn-raise" onclick="toggleRaise()" ${!isMyTurn ? 'disabled' : ''}>
+                                ⬆️ Raise
+                            </button>
+                        ` : ''}
+                        
+                        <button class="btn btn-allin" onclick="sendAction('allin')" ${!isMyTurn ? 'disabled' : ''}>
+                            💰 ALL-IN
+                        </button>
+                    </div>
+                    
+                    ${s.can_raise ? `
+                        <div class="raise-control" id="raise-control">
+                            <input type="number" id="raise-amount" value="${s.min_raise}" min="${s.min_raise}" max="${s.user_chips + s.user_bet}">
+                            <button class="btn btn-raise" onclick="doRaise()">Conferma Raise</button>
+                            <button class="btn" onclick="toggleRaise()" style="background:#666;">Annulla</button>
+                        </div>
+                    ` : ''}
+                ` : ''}
+            `;
+            
+            state.lastState = s;
+        }
+
+        function toggleRaise() {
+            const ctrl = document.getElementById('raise-control');
+            if (ctrl) {
+                ctrl.classList.toggle('visible');
+                isRaiseOpen = ctrl.classList.contains('visible');
+            }
+        }
+
+        function doRaise() {
+            const amount = parseInt(document.getElementById('raise-amount').value);
+            sendAction('raise', { amount });
+            isRaiseOpen = false;
+            toggleRaise();
+        }
+
+        function renderQuestionnaire() {
+            return `
+                <div class="questionnaire">
+                    <h2>📋 Questionario</h2>
+                    <p style="text-align:center;margin-bottom:25px;color:#888;">
+                        Rispondi a queste domande sulla tua esperienza.
+                    </p>
+                    
+                    <div class="question">
+                        <label>1. Quanto ti sei fidato del comportamento del robot?</label>
+                        <div class="rating-scale">
+                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q1" value="${n}"><span>${n}</span></label>`).join('')}
+                        </div>
+                        <div class="scale-labels"><span>Per niente</span><span>Molto</span></div>
+                    </div>
+                    
+                    <div class="question">
+                        <label>2. Quanto ti sei sentito sotto pressione durante il gioco?</label>
+                        <div class="rating-scale">
+                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q2" value="${n}"><span>${n}</span></label>`).join('')}
+                        </div>
+                        <div class="scale-labels"><span>Per niente</span><span>Molto</span></div>
+                    </div>
+                    
+                    <div class="question">
+                        <label>3. Quanto percepisci il robot come un giocatore competente?</label>
+                        <div class="rating-scale">
+                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q3" value="${n}"><span>${n}</span></label>`).join('')}
+                        </div>
+                        <div class="scale-labels"><span>Per niente</span><span>Molto</span></div>
+                    </div>
+                    
+                    <div class="question">
+                        <label>4. Quanto eri sicuro delle tue decisioni?</label>
+                        <div class="rating-scale">
+                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q4" value="${n}"><span>${n}</span></label>`).join('')}
+                        </div>
+                        <div class="scale-labels"><span>Per niente</span><span>Molto</span></div>
+                    </div>
+                    
+                    <div class="question">
+                        <label>5. Giocheresti di nuovo con questo robot?</label>
+                        <div class="rating-scale">
+                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q5" value="${n}"><span>${n}</span></label>`).join('')}
+                        </div>
+                        <div class="scale-labels"><span>Assolutamente no</span><span>Assolutamente sì</span></div>
+                    </div>
+                    
+                    <div class="question">
+                        <label>Commenti (opzionale):</label>
+                        <textarea id="comments" placeholder="Scrivi qui..."></textarea>
+                    </div>
+                    
+                    <button class="btn btn-submit" onclick="submitQuestionnaire()">
+                        📤 Invia Risposte
+                    </button>
+                </div>
+            `;
+        }
+
+        // =================================================================
+        // POLLING
+        // =================================================================
+        function startPolling() {
+            fetchStatus();
+            state.polling = setInterval(fetchStatus, 1000);
+        }
+
+        window.onload = startPolling;
+    </script>
+</body>
+</html>

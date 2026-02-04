@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - HRI Poker Experiment</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d0d0d;
+            min-height: 100vh;
+            color: #fff;
+            padding: 15px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #e94560 0%, #0f3460 100%);
+            padding: 15px 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 { font-size: 1.5rem; }
+        
+        .mode-badge {
+            background: rgba(0,0,0,0.5);
+            padding: 8px 18px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
+        
+        .panel {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .panel h2 {
+            color: #e94560;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333;
+        }
+        
+        .panel h3 {
+            color: #00d9ff;
+            margin: 15px 0 10px;
+            font-size: 0.95rem;
+        }
+        
+        /* Game visualization */
+        .game-visual {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .player-box {
+            background: #252525;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .player-box.user { border: 2px solid #ffd700; }
+        .player-box.robot { border: 2px solid #00d9ff; }
+        .player-box.community { border: 2px solid #e94560; }
+        
+        .player-box .name {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: #888;
+        }
+        
+        .player-box .chips {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .player-box.user .chips { color: #ffd700; }
+        .player-box.robot .chips { color: #00d9ff; }
+        
+        .player-box .bet {
+            font-size: 0.9rem;
+            color: #e94560;
+            margin-bottom: 10px;
+        }
+        
+        .mini-cards {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .mini-card {
+            width: 40px;
+            height: 56px;
+            background: #fff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .mini-card.red { color: #d32f2f; }
+        .mini-card.black { color: #212121; }
+        .mini-card.hidden { background: #1a237e; font-size: 0.7rem; color: #fff; }
+        
+        /* Status grid */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .status-item {
+            background: #252525;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .status-item .label { font-size: 0.75rem; color: #666; }
+        .status-item .value { font-size: 1.2rem; font-weight: bold; margin-top: 3px; }
+        
+        .status-item.phase .value { color: #e94560; }
+        .status-item.hand .value { color: #ffd700; }
+        .status-item.street .value { color: #4caf50; }
+        .status-item.turn .value { color: #00d9ff; }
+        .status-item.pot .value { color: #ff6b6b; }
+        
+        /* Alerts */
+        .alert {
+            padding: 12px 18px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .alert.visible { display: block; }
+        
+        .alert.bluff {
+            background: linear-gradient(135deg, #ff6b6b 0%, #c62828 100%);
+            animation: blink 0.5s infinite;
+        }
+        
+        .alert.thinking {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        /* Buttons */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .btn-grid-2 { grid-template-columns: repeat(2, 1fr); }
+        
+        .btn {
+            padding: 12px 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+        
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        .btn-primary { background: #e94560; color: white; }
+        .btn-success { background: #4caf50; color: white; }
+        .btn-warning { background: #ffc107; color: #000; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-info { background: #2196f3; color: white; }
+        .btn-secondary { background: #444; color: white; }
+        
+        .btn-full { grid-column: span 3; }
+        .btn-span2 { grid-column: span 2; }
+        
+        /* Input */
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background: #252525;
+            color: #fff;
+            font-size: 1rem;
+        }
+        
+        /* Data section */
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .data-row:last-child { border-bottom: none; }
+        .data-row .label { color: #666; }
+        .data-row .value { font-weight: bold; }
+        .data-row .value.highlight { color: #e94560; }
+        
+        /* Timeline */
+        .timeline {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #0a0a0a;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .timeline-item {
+            padding: 8px;
+            border-left: 3px solid #333;
+            margin-left: 10px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .timeline-item.user { border-color: #ffd700; }
+        .timeline-item.robot { border-color: #00d9ff; }
+        .timeline-item.system { border-color: #e94560; }
+        
+        .timeline-item .time { color: #666; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🔬 Admin Panel - HRI Poker Experiment</h1>
+        <span class="mode-badge" id="mode-badge">-</span>
+    </header>
+    
+    <div class="grid">
+        <div>
+            <!-- Game State -->
+            <div class="panel">
+                <h2>📊 Stato del Gioco</h2>
+                
+                <div class="status-grid">
+                    <div class="status-item phase">
+                        <div class="label">FASE</div>
+                        <div class="value" id="st-phase">-</div>
+                    </div>
+                    <div class="status-item hand">
+                        <div class="label">MANO</div>
+                        <div class="value" id="st-hand">-</div>
+                    </div>
+                    <div class="status-item street">
+                        <div class="label">STREET</div>
+                        <div class="value" id="st-street">-</div>
+                    </div>
+                    <div class="status-item turn">
+                        <div class="label">TURNO</div>
+                        <div class="value" id="st-turn">-</div>
+                    </div>
+                </div>
+                
+                <div class="alert bluff" id="alert-bluff">
+                    ⚠️ FASE BLUFF - Misurando tempo reazione!
+                </div>
+                
+                <div class="alert thinking" id="alert-thinking">
+                    🤖 Robot sta pensando...
+                </div>
+                
+                <div class="game-visual">
+                    <div class="player-box user">
+                        <div class="name">👤 UTENTE</div>
+                        <div class="chips" id="user-chips">-</div>
+                        <div class="bet" id="user-bet">Bet: -</div>
+                        <div class="mini-cards" id="user-cards"></div>
+                    </div>
+                    
+                    <div class="player-box community">
+                        <div class="name">🃏 COMMUNITY</div>
+                        <div class="chips" id="pot-display">Pot: -</div>
+                        <div class="mini-cards" id="community-cards"></div>
+                    </div>
+                    
+                    <div class="player-box robot">
+                        <div class="name">🤖 ROBOT</div>
+                        <div class="chips" id="robot-chips">-</div>
+                        <div class="bet" id="robot-bet">Bet: -</div>
+                        <div class="mini-cards" id="robot-cards"></div>
+                    </div>
+                </div>
+                
+                <div class="data-row">
+                    <span class="label">Ultima azione</span>
+                    <span class="value" id="last-action">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Vincitore mano</span>
+                    <span class="value" id="winner">-</span>
+                </div>
+            </div>
+            
+            <!-- Controls -->
+            <div class="panel" style="margin-top: 20px;">
+                <h2>🎮 Controlli Esperimento</h2>
+                
+                <div class="input-group">
+                    <input type="text" id="participant-id" placeholder="ID Partecipante (opzionale)">
+                    <button class="btn btn-primary" onclick="startExperiment()">🚀 Inizia</button>
+                </div>
+                
+                <h3>📝 Gestione Mani</h3>
+                <div class="btn-grid">
+                    <button class="btn btn-success" onclick="startHand(1)">Mano 1</button>
+                    <button class="btn btn-danger" onclick="startHand(2)">Mano 2 (BLUFF)</button>
+                    <button class="btn btn-info" onclick="startHand(3)">Mano 3</button>
+                    <button class="btn btn-warning btn-span2" onclick="nextHand()">➡️ Prossima Mano</button>
+                    <button class="btn btn-secondary" onclick="showQuestionnaire()">📋 Questionario</button>
+                </div>
+                
+                <h3>🤖 Comportamenti Robot</h3>
+                <div class="btn-grid">
+                    <button class="btn btn-secondary" onclick="triggerRobot('intro')">Intro</button>
+                    <button class="btn btn-secondary" onclick="triggerRobot('win_claim')">Vittoria</button>
+                    <button class="btn btn-danger" onclick="triggerRobot('bluff')">Bluff</button>
+                    <button class="btn btn-success" onclick="triggerRobot('bluff_success')">Bluff OK</button>
+                    <button class="btn btn-warning" onclick="triggerRobot('bluff_failed')">Bluff Fail</button>
+                    <button class="btn btn-info" onclick="triggerRobot('defeat')">Sconfitta</button>
+                </div>
+                
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-danger btn-full" onclick="resetExperiment()">🔄 Reset Esperimento</button>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <!-- Experiment Data -->
+            <div class="panel">
+                <h2>📈 Dati Esperimento</h2>
+                
+                <div class="data-row">
+                    <span class="label">Session ID</span>
+                    <span class="value" id="data-session">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Partecipante</span>
+                    <span class="value" id="data-participant">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Decisione su Bluff</span>
+                    <span class="value highlight" id="data-decision">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Tempo Reazione</span>
+                    <span class="value highlight" id="data-reaction">-</span>
+                </div>
+            </div>
+            
+            <!-- Event Log -->
+            <div class="panel" style="margin-top: 20px;">
+                <h2>📜 Log Eventi</h2>
+                <div class="timeline" id="timeline"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lastState = null;
+        const timeline = [];
+        
+        const SUITS = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
+        const VALUES = { 'ace': 'A', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9', '10': '10', 'jack': 'J', 'queen': 'Q', 'king': 'K' };
+
+        function parseCard(name) {
+            const parts = name.split('_of_');
+            return {
+                value: VALUES[parts[0]] || parts[0].toUpperCase(),
+                suit: SUITS[parts[1]] || '?',
+                color: (parts[1] === 'hearts' || parts[1] === 'diamonds') ? 'red' : 'black'
+            };
+        }
+
+        function renderMiniCard(name, hidden = false) {
+            if (hidden) return `<div class="mini-card hidden">?</div>`;
+            const c = parseCard(name);
+            return `<div class="mini-card ${c.color}">${c.value}${c.suit}</div>`;
+        }
+
+        function renderMiniCards(cards, revealed = 5) {
+            if (!cards || !cards.length) return '-';
+            return cards.slice(0, revealed).map(c => renderMiniCard(c)).join('') +
+                   cards.slice(revealed).map(() => renderMiniCard('', true)).join('');
+        }
+
+        function addLog(msg, type = 'system') {
+            const time = new Date().toLocaleTimeString();
+            timeline.unshift({ time, msg, type });
+            if (timeline.length > 50) timeline.pop();
+            renderTimeline();
+        }
+
+        function renderTimeline() {
+            const el = document.getElementById('timeline');
+            el.innerHTML = timeline.map(t => 
+                `<div class="timeline-item ${t.type}"><span class="time">${t.time}</span> ${t.msg}</div>`
+            ).join('');
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/admin/status');
+                const data = await res.json();
+                if (data.success) {
+                    updateUI(data.state, data.simulation_mode);
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function updateUI(s, simMode) {
+            document.getElementById('mode-badge').textContent = simMode ? '🔬 Simulazione' : '🤖 Robot Reale';
+            
+            // Status
+            document.getElementById('st-phase').textContent = s.phase_name || s.phase;
+            document.getElementById('st-hand').textContent = s.current_hand || '-';
+            document.getElementById('st-street').textContent = s.street || '-';
+            document.getElementById('st-turn').textContent = s.turn === 'user' ? '👤 Utente' : (s.turn === 'robot' ? '🤖 Robot' : '-');
+            
+            // Alerts
+            document.getElementById('alert-bluff').classList.toggle('visible', s.is_bluff_hand && s.turn === 'user' && !s.hand_over);
+            document.getElementById('alert-thinking').classList.toggle('visible', s.robot_thinking);
+            
+            // Game visual
+            document.getElementById('user-chips').textContent = s.user_chips;
+            document.getElementById('robot-chips').textContent = s.robot_chips;
+            document.getElementById('pot-display').textContent = `Pot: ${s.pot}`;
+            document.getElementById('user-bet').textContent = `Bet: ${s.user_bet}`;
+            document.getElementById('robot-bet').textContent = `Bet: ${s.robot_bet}`;
+            
+            document.getElementById('user-cards').innerHTML = renderMiniCards(s.user_cards);
+            document.getElementById('robot-cards').innerHTML = renderMiniCards(s.robot_cards);
+            document.getElementById('community-cards').innerHTML = renderMiniCards(s.community_cards, s.revealed_community);
+            
+            // Actions
+            const lastAct = s.last_action ? `${s.last_action_by === 'user' ? '👤' : '🤖'} ${s.last_action}` : '-';
+            document.getElementById('last-action').textContent = lastAct;
+            document.getElementById('winner').textContent = s.winner ? (s.winner === 'user' ? '👤 Utente' : '🤖 Robot') : '-';
+            
+            // Data
+            document.getElementById('data-session').textContent = s.session_id || '-';
+            document.getElementById('data-participant').textContent = s.participant_id || '-';
+            document.getElementById('data-decision').textContent = s.user_decision_on_bluff || '-';
+            document.getElementById('data-reaction').textContent = s.reaction_time_ms ? `${s.reaction_time_ms.toFixed(0)} ms` : '-';
+            
+            // Log changes
+            if (lastState) {
+                if (s.last_action !== lastState.last_action && s.last_action) {
+                    addLog(`${s.last_action_by === 'user' ? 'Utente' : 'Robot'}: ${s.last_action}`, s.last_action_by);
+                }
+                if (s.phase !== lastState.phase) {
+                    addLog(`Fase: ${s.phase_name}`, 'system');
+                }
+                if (s.street !== lastState.street && s.street) {
+                    addLog(`Street: ${s.street}`, 'system');
+                }
+                if (s.winner && !lastState.winner) {
+                    addLog(`Vincitore: ${s.winner === 'user' ? 'Utente' : 'Robot'}`, 'system');
+                }
+            }
+            
+            lastState = {...s};
+        }
+
+        async function sendAction(action, data = {}) {
+            try {
+                const res = await fetch('/api/admin/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, ...data })
+                });
+                const result = await res.json();
+                if (result.message) addLog(result.message, 'system');
+                fetchStatus();
+            } catch (e) { console.error(e); }
+        }
+
+        function startExperiment() {
+            const pid = document.getElementById('participant-id').value;
+            sendAction('start_experiment', { participant_id: pid });
+        }
+
+        function startHand(n) { sendAction('start_hand', { hand_number: n }); }
+        function nextHand() { sendAction('next_hand'); }
+        function showQuestionnaire() { sendAction('show_questionnaire'); }
+        function resetExperiment() {
+            if (confirm('Reset esperimento?')) sendAction('reset');
+        }
+        function triggerRobot(behavior) { sendAction('trigger_robot', { behavior }); }
+
+        setInterval(fetchStatus, 300);
+        fetchStatus();
+        addLog('Admin panel avviato', 'system');
+    </script>
+</body>
+</html>

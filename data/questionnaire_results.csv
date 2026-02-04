@@ -1,0 +1,5 @@
+session_id,timestamp,q1_trust,q2_pressure,q3_robot_competence,q4_decision_confidence,q5_would_play_again,comments
+20260204_154645,2026-02-04T15:50:03.346597,4,4,3,4,5,Test
+20260204_162124,2026-02-04T16:24:54.017776,,,,,,
+20260204_163916,2026-02-04T16:42:08.408170,5,4,4,4,5,Molto bello
+20260204_165044,2026-02-04T16:54:37.005312,5,4,4,3,2,vhtbj

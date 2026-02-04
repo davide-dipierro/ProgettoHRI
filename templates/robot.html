@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker - Robot</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        .header {
+            text-align: center;
+            padding: 15px 0;
+            border-bottom: 2px solid #0f3460;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            color: #00d9ff;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+        }
+        
+        .chips-display {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+        }
+        
+        .chip-info { text-align: center; }
+        .chip-info .label { font-size: 0.9rem; color: #888; margin-bottom: 5px; }
+        .chip-info .amount { font-size: 1.8rem; font-weight: bold; }
+        .chip-info.me .amount { color: #00d9ff; }
+        .chip-info.opponent .amount { color: #ffd700; }
+        .chip-info.pot .amount { color: #e94560; }
+        
+        .poker-table {
+            background: radial-gradient(ellipse at center, #35654d 0%, #1a3a2a 100%);
+            border: 12px solid #8b4513;
+            border-radius: 180px;
+            padding: 25px;
+            margin: 15px auto;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .cards-area { display: flex; flex-direction: column; gap: 25px; }
+        .player-section { text-align: center; }
+        
+        .player-label {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            padding: 6px 18px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .player-label.opponent { color: #ffd700; border: 2px solid #ffd700; }
+        .player-label.me { color: #00d9ff; border: 2px solid #00d9ff; }
+        .player-label.community { color: #ff6b6b; border: 2px solid #ff6b6b; }
+        
+        .bet-indicator { font-size: 0.9rem; color: #fff; margin-left: 10px; }
+        
+        .cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            min-height: 120px;
+        }
+        
+        .card {
+            width: 85px;
+            height: 120px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover { transform: translateY(-8px); }
+        
+        .card.back {
+            background: linear-gradient(135deg, #8b4513 0%, #654321 100%);
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.05) 10px, rgba(255,255,255,0.05) 20px);
+        }
+        
+        .card.back::after { content: "👤"; font-size: 2rem; }
+        
+        .card .value { position: absolute; top: 6px; left: 6px; font-weight: bold; font-size: 1.1rem; }
+        .card .suit { font-size: 2.5rem; }
+        .card .value-bottom { position: absolute; bottom: 6px; right: 6px; font-weight: bold; font-size: 1.1rem; transform: rotate(180deg); }
+        .card.red { color: #d32f2f; }
+        .card.black { color: #212121; }
+        
+        .info-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            border: 2px solid #0f3460;
+        }
+        
+        .turn-indicator {
+            font-size: 1.2rem;
+            padding: 12px 25px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .turn-indicator.my-turn {
+            background: #00d9ff;
+            color: #000;
+            animation: pulse 1s infinite;
+        }
+        
+        .turn-indicator.waiting { background: #666; }
+        .turn-indicator.thinking {
+            background: #ffc107;
+            color: #000;
+            animation: pulse 0.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .last-action {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            color: #aaa;
+        }
+        
+        .last-action strong { color: #fff; }
+        
+        .hand-result {
+            background: rgba(0,0,0,0.9);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .hand-result h3 { font-size: 1.8rem; margin-bottom: 10px; }
+        .hand-result.win h3 { color: #4caf50; }
+        .hand-result.lose h3 { color: #f44336; }
+        
+        .waiting-screen {
+            text-align: center;
+            padding: 100px 20px;
+        }
+        
+        .waiting-screen h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #00d9ff;
+        }
+        
+        .waiting-screen .loader {
+            font-size: 3rem;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .end-screen {
+            text-align: center;
+            padding: 80px 20px;
+        }
+        
+        .end-screen h2 {
+            font-size: 2.5rem;
+            color: #00d9ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🤖 Robot Poker Player</h1>
+        </header>
+        
+        <main id="game-area">
+            <div class="waiting-screen">
+                <h2>In attesa...</h2>
+                <div class="loader">🎴</div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const SUITS = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
+        const VALUES = { 'ace': 'A', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9', '10': '10', 'jack': 'J', 'queen': 'Q', 'king': 'K' };
+
+        function parseCard(name) {
+            const parts = name.split('_of_');
+            return {
+                value: VALUES[parts[0]] || parts[0].toUpperCase(),
+                suit: SUITS[parts[1]] || '?',
+                color: (parts[1] === 'hearts' || parts[1] === 'diamonds') ? 'red' : 'black'
+            };
+        }
+
+        function renderCard(name, back = false) {
+            if (back) return '<div class="card back"></div>';
+            const c = parseCard(name);
+            return `<div class="card ${c.color}"><span class="value">${c.value}</span><span class="suit">${c.suit}</span><span class="value-bottom">${c.value}</span></div>`;
+        }
+
+        function renderCards(cards, back = false) {
+            if (!cards || !cards.length) return '<span style="color:#666">-</span>';
+            return cards.map(c => renderCard(c, back)).join('');
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/robot/status');
+                const data = await res.json();
+                if (data.success) updateUI(data.state);
+            } catch (e) { console.error(e); }
+        }
+
+        function updateUI(s) {
+            const area = document.getElementById('game-area');
+            
+            if (s.phase === 'waiting') {
+                area.innerHTML = `<div class="waiting-screen"><h2>In attesa dell'inizio...</h2><div class="loader">🎴</div></div>`;
+                return;
+            }
+            
+            if (s.phase === 'questionnaire' || s.phase === 'end') {
+                area.innerHTML = `<div class="end-screen"><h2>Partita terminata</h2><p style="margin-top:20px;font-size:1.2rem;">In attesa...</p></div>`;
+                return;
+            }
+            
+            let statusText = '';
+            let statusClass = 'waiting';
+            
+            if (s.is_my_turn && !s.hand_over) {
+                statusText = '🎯 È il mio turno...';
+                statusClass = 'thinking';
+            } else if (!s.hand_over) {
+                statusText = "⏳ Turno dell'avversario";
+                statusClass = 'waiting';
+            }
+            
+            let resultHtml = '';
+            if (s.hand_over) {
+                const won = s.i_won;
+                resultHtml = `<div class="hand-result ${won ? 'win' : 'lose'}"><h3>${won ? '✓ Ho vinto!' : '✗ Ho perso'}</h3></div>`;
+            }
+            
+            let lastActionHtml = '';
+            if (s.last_action) {
+                const who = s.last_action_by === 'me' ? 'Io' : 'Avversario';
+                lastActionHtml = `<div class="last-action"><strong>${who}:</strong> ${s.last_action}</div>`;
+            }
+            
+            area.innerHTML = `
+                <div class="chips-display">
+                    <div class="chip-info me">
+                        <div class="label">Le mie chips</div>
+                        <div class="amount">🤖 ${s.user_chips}</div>
+                    </div>
+                    <div class="chip-info pot">
+                        <div class="label">Pot</div>
+                        <div class="amount">🏆 ${s.pot}</div>
+                    </div>
+                    <div class="chip-info opponent">
+                        <div class="label">Chips Avversario</div>
+                        <div class="amount">👤 ${s.robot_chips}</div>
+                    </div>
+                </div>
+                
+                <div class="poker-table">
+                    <div class="cards-area">
+                        <div class="player-section">
+                            <span class="player-label opponent">👤 Avversario</span>
+                            ${s.robot_bet > 0 ? `<span class="bet-indicator">Puntata: ${s.robot_bet}</span>` : ''}
+                            <div class="cards-container">
+                                ${s.show_opponent_cards ? renderCards(s.opponent_cards) : renderCards(['back', 'back'], true)}
+                            </div>
+                        </div>
+                        
+                        <div class="player-section">
+                            <span class="player-label community">🃏 Carte Comuni</span>
+                            <div class="cards-container">
+                                ${s.community_cards.length > 0 ? renderCards(s.community_cards) : '<span style="color:#666">-</span>'}
+                            </div>
+                        </div>
+                        
+                        <div class="player-section">
+                            <span class="player-label me">🤖 Io</span>
+                            ${s.user_bet > 0 ? `<span class="bet-indicator">Puntata: ${s.user_bet}</span>` : ''}
+                            <div class="cards-container">
+                                ${renderCards(s.my_cards)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${resultHtml}
+                
+                ${!s.hand_over ? `
+                    <div class="info-panel">
+                        <div class="turn-indicator ${statusClass}">${statusText}</div>
+                        ${lastActionHtml}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        setInterval(fetchStatus, 500);
+        fetchStatus();
+    </script>
+</body>
+</html>
