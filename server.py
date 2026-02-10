@@ -308,7 +308,7 @@ def robot_make_decision():
     Il robot prende una decisione basata sulla strategia predefinita.
     
     Strategia per mano:
-    - Mano 1: Gioca aggressivo (ha carte forti), va a showdown  TODO Va corretto
+    - Mano 1: Gioca passivo e perde.
     - Mano 2: ALL-IN (bluff!) al river
     - Mano 3: Gioca passivo, folda o chiama
     """
