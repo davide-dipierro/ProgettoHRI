@@ -40,15 +40,27 @@ fi
 # Verifica Flask
 if ! python3 -c "import flask" 2>/dev/null; then
     echo "⚠️  Flask non trovato. Installazione..."
-    pip install flask
+    pip3 install flask
+    if ! python3 -c "import flask" 2>/dev/null; then
+        echo "❌ Errore: impossibile installare Flask!"
+        exit 1
+    fi
 fi
+echo "✓ Flask disponibile"
+
+# Esporta il percorso Python per i subprocess del server
+export PYTHON_PATH="$(which python3)"
+echo "✓ Python: $PYTHON_PATH"
 
 # Crea cartella dati se non esiste
 mkdir -p "$PROJECT_DIR/data"
 
 echo "=============================================="
 echo "   Avvio server Flask..."
-echo "   Apri: http://localhost:5000"
+echo "   Interfacce:"
+echo "     Player: http://localhost:5000/player"
+echo "     Robot:  http://localhost:5000/robot"
+echo "     Admin:  http://localhost:5000/admin"
 echo "=============================================="
 echo ""
 

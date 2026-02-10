@@ -138,6 +138,8 @@ class NAORobot:
         if color in colors:
             r, g, b = colors[color]
             self.leds.fadeRGB(led_group, r, g, b, 0.3)
+        else:
+            print("[NAO WARN] Colore LED non riconosciuto: '{}', ignorato".format(color))
     
     def gesture(self, name):
         """Esegue un gesto predefinito in modo sicuro."""
@@ -172,6 +174,8 @@ class NAORobot:
                 time.sleep(0.4)
                 self.motion.setAngles("HeadPitch", -0.1, 0.2)
                 time.sleep(0.4)
+            # Reset testa alla posizione neutra
+            self.motion.setAngles("HeadPitch", 0.0, 0.2)
                 
         elif name == "shake_head":
             # Scuotere testa (No)
@@ -180,7 +184,9 @@ class NAORobot:
                 time.sleep(0.4)
                 self.motion.setAngles("HeadYaw", -0.3, 0.2)
                 time.sleep(0.4)
+            # Reset testa alla posizione neutra
             self.motion.setAngles("HeadYaw", 0.0, 0.2)
+            self.motion.setAngles("HeadPitch", 0.0, 0.2)
             
         elif name == "confident":
             # Posa fiera
@@ -239,7 +245,7 @@ class NAORobot:
             
         elif name == "sad":
             self.set_leds("blue")
-            self.motion.setAngles("HeadPitch", 0.4, 0.1) # Lento
+            self.motion.setAngles("HeadPitch", 0.3, 0.1) # Lento, angolo ridotto per sicurezza
             time.sleep(1.0)
             self.set_leds("white")
             self.posture.goToPosture("StandInit", 0.5)
