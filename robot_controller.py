@@ -87,9 +87,9 @@ class SimulatedRobot:
 
 
 class NAORobot:
-    """Controller per robot NAO fisico via NAOqi SDK."""
+    """Controller sicuro per robot NAO fisico via NAOqi SDK."""  
     
-    def __init__(self, ip, port):
+    def __init__(self, ip, port=9559):
         self.ip = ip
         self.port = port
         
@@ -103,16 +103,26 @@ class NAORobot:
             self.tts.setParameter("speed", 85)
             self.tts.setLanguage("Italian")
             
-            # Abilita motori
-            self.motion.setStiffnesses("Body", 1.0)
+            # --- SICUREZZA ---
+            # Invece di dare rigidità bruta, usiamo wakeUp(). 
+            # Questo controlla che il robot sia in una posizione sicura prima di attivarsi.
+            print("[NAO] Eseguo wakeUp (accensione motori sicura)...")
+            self.motion.wakeUp()
             
-            print("[NAO] Connesso a {}:{}".format(ip, port))
+            # Abilita il controllo anticollisione per sicurezza
+            chain_name = "Body"
+            enable = True
+            self.motion.setCollisionProtectionEnabled(chain_name, enable)
+            
+            print("[NAO] Connesso e pronto a {}:{}".format(ip, port))
+            
         except Exception as e:
-            print("[NAO] Errore connessione: {}".format(e))
+            print("[NAO] Errore critico connessione: {}".format(e))
             raise
     
     def say(self, text):
         """Fa parlare il robot."""
+        print("[NAO Say]: {}".format(text))
         self.tts.say(text)
     
     def set_leds(self, color):
@@ -130,96 +140,126 @@ class NAORobot:
             self.leds.fadeRGB(led_group, r, g, b, 0.3)
     
     def gesture(self, name):
-        """Esegue un gesto predefinito."""
+        """Esegue un gesto predefinito in modo sicuro."""
+        print("[NAO Gesture]: {}".format(name))
+        
+        # Ci assicuriamo di partire da una posizione stabile
+        if not self.motion.robotIsWakeUp():
+            self.motion.wakeUp()
+
         if name == "wave":
+            # Saluto
             self.motion.angleInterpolation(
                 ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RWristYaw"],
                 [0.0, -0.3, 1.5, 0.0],
-                [0.8, 0.8, 0.8, 0.8],
+                [1.0, 1.0, 1.0, 1.0], # Tempi leggermente rallentati per fluidità
                 True
             )
+            # Loop del polso
             for _ in range(2):
                 self.motion.setAngles("RWristYaw", 0.5, 0.3)
-                time.sleep(0.2)
+                time.sleep(0.3)
                 self.motion.setAngles("RWristYaw", -0.5, 0.3)
-                time.sleep(0.2)
+                time.sleep(0.3)
+            
+            # Ritorno sicuro
             self.posture.goToPosture("StandInit", 0.5)
             
         elif name == "nod":
+            # Annuire
             for _ in range(2):
-                self.motion.setAngles("HeadPitch", 0.2, 0.3)
-                time.sleep(0.3)
-                self.motion.setAngles("HeadPitch", -0.1, 0.3)
-                time.sleep(0.3)
+                self.motion.setAngles("HeadPitch", 0.2, 0.2) # Velocità ridotta a 0.2
+                time.sleep(0.4)
+                self.motion.setAngles("HeadPitch", -0.1, 0.2)
+                time.sleep(0.4)
                 
         elif name == "shake_head":
+            # Scuotere testa (No)
             for _ in range(2):
-                self.motion.setAngles("HeadYaw", 0.3, 0.3)
-                time.sleep(0.25)
-                self.motion.setAngles("HeadYaw", -0.3, 0.3)
-                time.sleep(0.25)
+                self.motion.setAngles("HeadYaw", 0.3, 0.2)
+                time.sleep(0.4)
+                self.motion.setAngles("HeadYaw", -0.3, 0.2)
+                time.sleep(0.4)
             self.motion.setAngles("HeadYaw", 0.0, 0.2)
             
         elif name == "confident":
+            # Posa fiera
             self.motion.angleInterpolation(
                 ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll"],
                 [0.5, -0.2, 1.0, 1.0],
-                [1.0, 1.0, 1.0, 1.0],
+                [1.5, 1.5, 1.5, 1.5], # Più lento = più stabile
                 True
             )
-            time.sleep(0.5)
+            time.sleep(1.0)
             self.posture.goToPosture("StandInit", 0.5)
             
         elif name == "aggressive":
-            self.motion.setAngles("HipPitch", -0.1, 0.3)
-            self.motion.angleInterpolation(
-                ["LShoulderPitch", "LShoulderRoll", "RShoulderPitch", "RShoulderRoll"],
-                [0.8, 0.2, 0.8, -0.2],
-                [1.0, 1.0, 1.0, 1.0],
-                True
-            )
-            self.motion.setAngles("HeadPitch", -0.2, 0.3)
+            # --- MODIFICATO PER SICUREZZA ---
+            # Rimosso il movimento dell'anca (HipPitch) che causava cadute.
+            # Ora muove solo le braccia e la testa in avanti.
+            self.set_leds("red")
+            
+            # Ci pieghiamo leggermente in avanti usando la postura sicura (se disponibile)
+            # O simuliamo l'aggressività solo con braccia e testa
+            names = ["LShoulderPitch", "LShoulderRoll", "RShoulderPitch", "RShoulderRoll", "HeadPitch"]
+            keys = [0.8, 0.2, 0.8, -0.2, -0.1]
+            times = [1.0, 1.0, 1.0, 1.0, 1.0]
+            
+            self.motion.angleInterpolation(names, keys, times, True)
+            time.sleep(1.0)
+            self.set_leds("white")
+            self.posture.goToPosture("StandInit", 0.5)
             
         elif name == "shock":
+            self.set_leds("blue")
             self.motion.angleInterpolation(
-                ["LShoulderPitch", "LShoulderRoll", "RShoulderPitch", "RShoulderRoll"],
-                [-0.5, 0.5, -0.5, -0.5],
-                [0.5, 0.5, 0.5, 0.5],
+                ["LShoulderPitch", "LShoulderRoll", "RShoulderPitch", "RShoulderRoll", "HeadPitch"],
+                [-0.5, 0.5, -0.5, -0.5, -0.3],
+                [0.6, 0.6, 0.6, 0.6, 0.6],
                 True
             )
-            self.motion.setAngles("HeadPitch", -0.3, 0.3)
-            time.sleep(0.5)
+            time.sleep(1.0)
+            self.set_leds("white")
+            self.posture.goToPosture("StandInit", 0.5)
             
         elif name == "relax":
             self.posture.goToPosture("StandInit", 0.5)
             
         elif name == "celebrate":
+            self.set_leds("green")
             self.motion.angleInterpolation(
                 ["LShoulderPitch", "RShoulderPitch"],
-                [-0.5, -0.5],
-                [0.5, 0.5],
+                [-0.8, -0.8], # Alzate di più per essere visibili
+                [0.8, 0.8],
                 True
             )
-            time.sleep(0.3)
+            time.sleep(0.5)
             self.posture.goToPosture("StandInit", 0.5)
+            self.set_leds("white")
             
         elif name == "sad":
-            self.motion.setAngles("HeadPitch", 0.4, 0.3)
-            time.sleep(0.5)
+            self.set_leds("blue")
+            self.motion.setAngles("HeadPitch", 0.4, 0.1) # Lento
+            time.sleep(1.0)
+            self.set_leds("white")
+            self.posture.goToPosture("StandInit", 0.5)
     
     def look_at_user(self):
         """Guarda l'utente."""
-        self.motion.setAngles("HeadPitch", -0.1, 0.2)
-        self.motion.setAngles("HeadYaw", 0.0, 0.2)
+        self.motion.setAngles(["HeadPitch", "HeadYaw"], [-0.1, 0.0], 0.2)
     
     def stand(self):
-        """Posizione in piedi."""
-        self.posture.goToPosture("StandInit", 0.5)
+        """Posizione in piedi sicura."""
+        self.posture.goToPosture("StandInit", 0.8)
     
     def cleanup(self):
-        """Ripristina stato neutro."""
+        """Ripristina stato neutro e rilassa i motori."""
+        print("[NAO] Cleanup in corso...")
         self.set_leds("white")
         self.posture.goToPosture("StandInit", 0.5)
+        # Importante: togliere tensione ai motori per non surriscaldarli se il robot non fa nulla
+        self.motion.rest()
+        print("[NAO] Riposo (Rest Mode).")
 
 
 # =============================================================================

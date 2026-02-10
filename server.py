@@ -42,7 +42,7 @@ STARTING_CHIPS = 1000
 SMALL_BLIND = 10
 BIG_BLIND = 20
 
-# Tempo di "pensata" del robot (secondi) - ridotto per fluidità
+# Tempo di "pensata" del robot (secondi)
 # Il robot parla durante le azioni quindi non serve aspettare molto
 ROBOT_THINK_TIME_MIN = 1
 ROBOT_THINK_TIME_MAX = 2
@@ -308,7 +308,7 @@ def robot_make_decision():
     Il robot prende una decisione basata sulla strategia predefinita.
     
     Strategia per mano:
-    - Mano 1: Gioca aggressivo (ha carte forti), va a showdown
+    - Mano 1: Gioca aggressivo (ha carte forti), va a showdown  TODO Va corretto
     - Mano 2: ALL-IN (bluff!) al river
     - Mano 3: Gioca passivo, folda o chiama
     """
@@ -741,7 +741,7 @@ def api_player_action():
         game.turn = "robot"
         
         # Reazione del robot (solo occasionalmente per non rallentare troppo)
-        # trigger_robot("react_user_check")  # Disabilitato per fluidità
+        # trigger_robot("react_user_check")  # Disabilitato per fluidità TODO Controllare se fattibile
         
         # Robot risponde
         robot_make_decision()
