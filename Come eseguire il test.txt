@@ -1,12 +1,12 @@
 # Solo verbose (output dettagliato)
-python3 verify_system.py --verbose
+python verify_system.py --verbose
 
 # Solo pause (step-by-step, premi Invio per ogni azione)
-python3 verify_system.py --pause
+python verify_system.py --pause
 
 # Entrambi
-python3 verify_system.py --verbose --pause
+python verify_system.py --verbose --pause
 
 # Forme abbreviate
-python3 verify_system.py -v -p
-python3 verify_system.py -vp
+python verify_system.py -v -p
+python verify_system.py -vp

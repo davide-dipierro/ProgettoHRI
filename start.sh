@@ -32,25 +32,25 @@ else
 fi
 
 # Verifica Python
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Errore: python3 non trovato!"
+if ! command -v python &> /dev/null; then
+    echo "Errore: python non trovato!"
     exit 1
 fi
 
 # Verifica Flask
-if ! python3 -c "import flask" 2>/dev/null; then
-    echo "⚠️  Flask non trovato. Installazione..."
-    pip3 install flask
-    if ! python3 -c "import flask" 2>/dev/null; then
-        echo "❌ Errore: impossibile installare Flask!"
+if ! python -c "import flask" 2>/dev/null; then
+    echo "Flask non trovato. Installazione..."
+    pip install flask
+    if ! python -c "import flask" 2>/dev/null; then
+        echo "Errore: impossibile installare Flask!"
         exit 1
     fi
 fi
-echo "✓ Flask disponibile"
+echo "Flask disponibile"
 
 # Esporta il percorso Python per i subprocess del server
-export PYTHON_PATH="$(which python3)"
-echo "✓ Python: $PYTHON_PATH"
+export PYTHON_PATH="$(which python)"
+echo "Python: $PYTHON_PATH"
 
 # Crea cartella dati se non esiste
 mkdir -p "$PROJECT_DIR/data"
@@ -65,4 +65,4 @@ echo "=============================================="
 echo ""
 
 # Avvia il server
-python3 "$PROJECT_DIR/server.py"
+python "$PROJECT_DIR/server.py"

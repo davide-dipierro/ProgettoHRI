@@ -18,14 +18,14 @@ Sistema per esperimento di Human-Robot Interaction (HRI) che simula una partita 
 
 ```bash
 cd /home/davide/ProgettoHRI
-SIMULATION_MODE=true python3 server.py
+SIMULATION_MODE=true python server.py
 ```
 
 ### 2. Modalità Robot Fisico
 
 ```bash
 cd /home/davide/ProgettoHRI
-SIMULATION_MODE=false NAO_IP=192.168.x.x python3 server.py
+SIMULATION_MODE=false NAO_IP=192.168.x.x python server.py
 ```
 
 ### 3. Accesso alle Interfacce
@@ -117,7 +117,7 @@ pip install flask
 
 ### Per Robot NAO Fisico (opzionale)
 ```bash
-pip install naoqi  # Richiede SDK NAOqi
+# Richiede qi SDK (Python 2.7 32-bit + NAOqi/Choregraphe SDK)
 ```
 
 ---
@@ -143,7 +143,7 @@ pip install naoqi  # Richiede SDK NAOqi
 ### Il robot non parla
 ```bash
 # Verifica che robot_controller.py sia eseguibile
-python3 robot_controller.py --action intro --simulate
+python robot_controller.py --action intro --simulate
 ```
 
 ### Le carte non vengono mostrate

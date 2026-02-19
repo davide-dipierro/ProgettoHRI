@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Test completo di tutte le azioni del Robot Controller.
@@ -10,9 +10,9 @@ Produce un report finale con esito per ogni azione.
 Può essere eseguito direttamente o importato da verify_system.py.
 
 Usage:
-    python3 test_all_actions.py
-    python3 test_all_actions.py --verbose
-    python3 test_all_actions.py --pause        # attende input tra un'azione e l'altra
+    python test_all_actions.py
+    python test_all_actions.py --verbose
+    python test_all_actions.py --pause        # attende input tra un'azione e l'altra
 """
 
 from __future__ import print_function
@@ -58,13 +58,13 @@ RESET = "\033[0m"
 
 
 def print_ok(msg):
-    print(f"{GREEN}✓{RESET} {msg}")
+    print("{}\u2713{} {}".format(GREEN, RESET, msg))
 
 def print_fail(msg):
-    print(f"{RED}✗{RESET} {msg}")
+    print("{}\u2717{} {}".format(RED, RESET, msg))
 
 def print_warn(msg):
-    print(f"{YELLOW}!{RESET} {msg}")
+    print("{}!{} {}".format(YELLOW, RESET, msg))
 
 
 # Lista ordinata di tutte le azioni da testare, raggruppate per categoria
@@ -113,14 +113,19 @@ def run_single_test(name, action_func, description, robot, verbose=False):
             action_func(robot)
         else:
             # Cattura stdout per non intasare il terminale
-            import io
-            from contextlib import redirect_stdout
-            buf = io.StringIO()
-            with redirect_stdout(buf):
+            import sys
+            import os
+            old_stdout = sys.stdout
+            sys.stdout = open(os.devnull, 'w')
+            try:
                 action_func(robot)
+            finally:
+                sys.stdout.close()
+                sys.stdout = old_stdout
         return True, None
     except Exception as e:
-        return False, "".join(traceback.format_exception(type(e), e, e.__traceback__))
+        import traceback
+        return False, traceback.format_exc()
 
 
 def run_all_action_tests(verbose=False, pause=False):
@@ -135,23 +140,23 @@ def run_all_action_tests(verbose=False, pause=False):
     results = []
 
     for i, (name, func, desc) in enumerate(ALL_ACTIONS, 1):
-        header = f"[{i:2d}/{len(ALL_ACTIONS)}] {name}"
-        print(f"  {CYAN}{header}{RESET}  -  {desc}")
+        header = "[{:2d}/{}] {}".format(i, len(ALL_ACTIONS), name)
+        print("  {}{}{}  -  {}".format(CYAN, header, RESET, desc))
 
         if pause:
-            input(f"    {YELLOW}Premi Invio per eseguire...{RESET}")
+            input("    {}Premi Invio per eseguire...{}".format(YELLOW, RESET))
 
         start = time.time()
         ok, err = run_single_test(name, func, desc, robot, verbose=verbose)
         elapsed = time.time() - start
 
         if ok:
-            print_ok(f"{name} ({elapsed:.2f}s)")
+            print_ok("{} ({:.2f}s)".format(name, elapsed))
         else:
-            print_fail(f"{name} ({elapsed:.2f}s)")
+            print_fail("{} ({:.2f}s)".format(name, elapsed))
             if err:
                 for line in err.strip().split("\n")[-3:]:
-                    print(f"      {RED}{line}{RESET}")
+                    print("      {}{}{}".format(RED, line, RESET))
 
         results.append((name, desc, ok, err, elapsed))
 
@@ -162,23 +167,23 @@ def run_all_action_tests(verbose=False, pause=False):
 
 def print_safety_report():
     """Stampa il report dei controlli di sicurezza statica."""
-    print(f"\n  {BOLD}Controllo di sicurezza statico{RESET}")
+    print("\n  {}Controllo di sicurezza statico{}".format(BOLD, RESET))
     for check, ok, note in SAFETY_CHECKS:
         if ok:
-            print_ok(f"{check}")
+            print_ok("{}".format(check))
         else:
-            print_fail(f"{check}")
+            print_fail("{}".format(check))
         if note:
-            print(f"      {YELLOW}→ {note}{RESET}")
+            print("      {}-> {}{}".format(YELLOW, note, RESET))
 
 
 def print_results_table(results):
     """Stampa la tabella riassuntiva dei risultati."""
-    print(f"\n  {'AZIONE':<25} {'ESITO':<8} {'TEMPO':>8}")
-    print(f"  {'-'*25} {'-'*8} {'-'*8}")
+    print("\n  {:<25} {:<8} {:>8}".format('AZIONE', 'ESITO', 'TEMPO'))
+    print("  {} {} {}".format('-'*25, '-'*8, '-'*8))
     for name, desc, ok, err, elapsed in results:
-        status = f"{GREEN}PASS{RESET}" if ok else f"{RED}FAIL{RESET}"
-        print(f"  {name:<25} {status:<17} {elapsed:>7.2f}s")
+        status = "{}PASS{}".format(GREEN, RESET) if ok else "{}FAIL{}".format(RED, RESET)
+        print("  {:<25} {:<17} {:>7.2f}s".format(name, status, elapsed))
 
 
 def main():
@@ -198,11 +203,11 @@ def main():
     args = parser.parse_args()
 
     print()
-    print(f"{'='*64}")
-    print(f"  TEST COMPLETO AZIONI ROBOT - MODALITA' SIMULAZIONE")
-    print(f"{'='*64}")
-    print(f"  Totale azioni da testare: {len(ALL_ACTIONS)}")
-    print(f"{'='*64}\n")
+    print('='*64)
+    print('  TEST COMPLETO AZIONI ROBOT - MODALITA\' SIMULAZIONE')
+    print('='*64)
+    print('  Totale azioni da testare: {}'.format(len(ALL_ACTIONS)))
+    print('{}\n'.format('='*64))
 
     passed, failed, results = run_all_action_tests(
         verbose=args.verbose, pause=args.pause
@@ -210,27 +215,27 @@ def main():
     total_time = sum(r[4] for r in results)
 
     # Report finale
-    print(f"\n{'='*64}")
-    print(f"  REPORT FINALE")
-    print(f"{'='*64}")
-    print(f"  Totale:   {len(results)}")
-    print(f"  {GREEN}Passati:  {passed}{RESET}")
+    print('\n{}'.format('='*64))
+    print('  REPORT FINALE')
+    print('='*64)
+    print('  Totale:   {}'.format(len(results)))
+    print('  {}Passati:  {}{}'.format(GREEN, passed, RESET))
     if failed > 0:
-        print(f"  {RED}Falliti:  {failed}{RESET}")
+        print('  {}Falliti:  {}{}'.format(RED, failed, RESET))
     else:
-        print(f"  Falliti:  0")
-    print(f"  Tempo:    {total_time:.2f}s")
+        print('  Falliti:  0')
+    print('  Tempo:    {:.2f}s'.format(total_time))
 
     # Dettaglio azioni fallite
     if failed > 0:
-        print(f"\n  {RED}{BOLD}AZIONI FALLITE:{RESET}")
-        print(f"  {'-'*58}")
+        print('\n  {}{}AZIONI FALLITE:{}'.format(RED, BOLD, RESET))
+        print('  {}'.format('-'*58))
         for name, desc, ok, err, elapsed in results:
             if not ok:
-                print_fail(f"{name}: {desc}")
+                print_fail('{}: {}'.format(name, desc))
                 if err:
-                    for line in err.strip().split("\n")[-3:]:
-                        print(f"      {line}")
+                    for line in err.strip().split('\n')[-3:]:
+                        print('      {}'.format(line))
 
     # Tabella riassuntiva
     print_results_table(results)
@@ -238,12 +243,12 @@ def main():
     # Analisi di sicurezza statica
     print_safety_report()
 
-    print(f"\n{'='*64}")
+    print('\n{}'.format('='*64))
     if failed == 0:
-        print(f"{GREEN}{BOLD}  TUTTI I TEST SUPERATI! Il robot e' pronto per l'esperimento.{RESET}")
+        print('{}{}  TUTTI I TEST SUPERATI! Il robot e\' pronto per l\'esperimento.{}'.format(GREEN, BOLD, RESET))
     else:
-        print(f"{RED}{BOLD}  ATTENZIONE: {failed} azione/i fallita/e. Correggere prima dell'uso.{RESET}")
-    print(f"{'='*64}\n")
+        print('{}{}  ATTENZIONE: {} azione/i fallita/e. Correggere prima dell\'uso.{}'.format(RED, BOLD, failed, RESET))
+    print('{}\n'.format('='*64))
 
     return 0 if failed == 0 else 1
 

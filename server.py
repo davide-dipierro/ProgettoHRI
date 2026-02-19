@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Flask Server (Brain) - HRI Poker Experiment
-Università degli Studi - Esperimento Overtrust
+Universit\u00e0 degli Studi - Esperimento Overtrust
 
 Tre interfacce:
 - /player -> Interfaccia utente (davanti all'utente)
@@ -13,6 +13,7 @@ Il robot prende decisioni AUTOMATICHE basate sulla strategia predefinita.
 Le fasi (Establishment, Bluff, Cooldown) sono invisibili all'utente.
 """
 
+from __future__ import print_function
 import os
 import csv
 import time
@@ -29,7 +30,7 @@ app = Flask(__name__)
 
 ROBOT_IP = os.environ.get("NAO_IP", "127.0.0.1")
 ROBOT_PORT = int(os.environ.get("NAO_PORT", "9559"))
-PYTHON_PATH = os.environ.get("PYTHON_PATH", "python3")
+PYTHON_PATH = os.environ.get("PYTHON_PATH", "python")
 ROBOT_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "robot_controller.py")
 SIMULATION_MODE = os.environ.get("SIMULATION_MODE", "true").lower() == "true"
 
@@ -135,7 +136,7 @@ class GameState:
     def start_hand(self, hand_number):
         """Inizia una nuova mano."""
         self.current_hand = hand_number
-        self.phase = f"hand_{hand_number}"
+        self.phase = "hand_{}".format(hand_number)
         
         hand_data = self.hands[hand_number]
         self.user_cards = hand_data["user"]
@@ -287,15 +288,16 @@ def trigger_robot(action):
         else:
             cmd.extend(["--ip", ROBOT_IP, "--port", str(ROBOT_PORT)])
         
-        print(f"[ROBOT] Eseguo: {' '.join(cmd)}")
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        print("[ROBOT] Eseguo: {}".format(' '.join(cmd)))
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
         
-        if result.returncode == 0:
-            print(f"[ROBOT] Azione '{action}' completata")
+        if proc.returncode == 0:
+            print("[ROBOT] Azione '{}' completata".format(action))
             return True
         return False
     except Exception as e:
-        print(f"[ROBOT] Eccezione: {e}")
+        print("[ROBOT] Eccezione: {}".format(e))
         return False
 
 
@@ -338,7 +340,7 @@ def execute_robot_decision():
     call_amount = game.current_bet - game.robot_bet
     user_is_allin = game.user_chips == 0
     
-    print(f"[ROBOT AI] Mano {hand}, Street {street}, Bet corrente: {game.current_bet}, Robot bet: {game.robot_bet}, User all-in: {user_is_allin}")
+    print("[ROBOT AI] Mano {}, Street {}, Bet corrente: {}, Robot bet: {}, User all-in: {}".format(hand, street, game.current_bet, game.robot_bet, user_is_allin))
     
     # =========================================================================
     # MANO 1 - ESTABLISHMENT (Robot ha A-K, gioca aggressivo ma perde)
@@ -467,7 +469,7 @@ def advance_to_next_street():
         elif game.street == game.STREET_RIVER:
             game.revealed_community = 5
         
-        print(f"[GAME] Avanzato a {game.street}, rivelate {game.revealed_community} carte")
+        print("[GAME] Avanzato a {}, rivelate {} carte".format(game.street, game.revealed_community))
     else:
         # Showdown
         do_showdown()
@@ -495,14 +497,14 @@ def do_robot_call():
     
     # Se il robot ha messo tutto, è all-in
     if game.robot_chips == 0:
-        game.last_action = f"ALL-IN (call {actual_call})"
+        game.last_action = "ALL-IN (call {})".format(actual_call)
         trigger_robot("robot_call_allin")
     else:
-        game.last_action = f"call {actual_call}"
+        game.last_action = "call {}".format(actual_call)
         trigger_robot("robot_call")
     game.last_action_by = "robot"
     game.turn = "user"
-    print(f"[ROBOT AI] Call {actual_call} (chips rimanenti: {game.robot_chips})")
+    print("[ROBOT AI] Call {} (chips rimanenti: {})".format(actual_call, game.robot_chips))
 
 
 def do_robot_raise(amount):
@@ -516,7 +518,7 @@ def do_robot_raise(amount):
     game.robot_bet += actual_chips
     game.current_bet = game.robot_bet
     
-    game.last_action = f"raise {game.robot_bet}"
+    game.last_action = "raise {}".format(game.robot_bet)
     game.last_action_by = "robot"
     game.turn = "user"
     
@@ -525,7 +527,7 @@ def do_robot_raise(amount):
         trigger_robot("robot_raise_bluff")
     else:
         trigger_robot("robot_raise")
-    print(f"[ROBOT AI] Raise a {game.robot_bet}")
+    print("[ROBOT AI] Raise a {}".format(game.robot_bet))
 
 
 def do_robot_allin():
@@ -536,10 +538,10 @@ def do_robot_allin():
     game.robot_bet += allin_amount
     game.current_bet = game.robot_bet
     
-    game.last_action = f"ALL-IN {allin_amount}"
+    game.last_action = "ALL-IN {}".format(allin_amount)
     game.last_action_by = "robot"
     game.turn = "user"
-    print(f"[ROBOT AI] ALL-IN! {allin_amount}")
+    print("[ROBOT AI] ALL-IN! {}".format(allin_amount))
 
 
 def do_robot_fold():
@@ -581,7 +583,7 @@ def do_showdown():
     if game.current_hand == 2:
         log_experiment_result()
     
-    print(f"[GAME] Showdown! Vince: {game.winner}")
+    print("[GAME] Showdown! Vince: {}".format(game.winner))
 
 
 # =============================================================================
@@ -590,10 +592,11 @@ def do_showdown():
 
 def init_data_files():
     """Inizializza i file CSV."""
-    os.makedirs(DATA_DIR, exist_ok=True)
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
     
     if not os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'w', newline='', encoding='utf-8') as f:
+        with open(DATA_FILE, 'wb') as f:
             writer = csv.writer(f)
             writer.writerow([
                 "session_id", "participant_id", "timestamp",
@@ -602,7 +605,7 @@ def init_data_files():
             ])
     
     if not os.path.exists(QUESTIONNAIRE_FILE):
-        with open(QUESTIONNAIRE_FILE, 'w', newline='', encoding='utf-8') as f:
+        with open(QUESTIONNAIRE_FILE, 'wb') as f:
             writer = csv.writer(f)
             writer.writerow([
                 "session_id", "timestamp",
@@ -614,7 +617,7 @@ def init_data_files():
 def log_experiment_result():
     """Salva i risultati."""
     try:
-        with open(DATA_FILE, 'a', newline='', encoding='utf-8') as f:
+        with open(DATA_FILE, 'ab') as f:
             writer = csv.writer(f)
             writer.writerow([
                 game.session_id,
@@ -628,13 +631,13 @@ def log_experiment_result():
             ])
         print("[DATA] Risultato salvato")
     except Exception as e:
-        print(f"[DATA] Errore: {e}")
+        print("[DATA] Errore: {}".format(e))
 
 
 def log_questionnaire(data):
     """Salva questionario."""
     try:
-        with open(QUESTIONNAIRE_FILE, 'a', newline='', encoding='utf-8') as f:
+        with open(QUESTIONNAIRE_FILE, 'ab') as f:
             writer = csv.writer(f)
             writer.writerow([
                 game.session_id, datetime.now().isoformat(),
@@ -642,7 +645,7 @@ def log_questionnaire(data):
                 data.get("q4", ""), data.get("q5", ""), data.get("comments", "")
             ])
     except Exception as e:
-        print(f"[DATA] Errore questionario: {e}")
+        print("[DATA] Errore questionario: {}".format(e))
 
 
 # =============================================================================
@@ -706,7 +709,7 @@ def api_player_action():
     action = data.get("action", "").lower()
     amount = data.get("amount", 0)
     
-    print(f"\n[PLAYER] Azione: {action}")
+    print("\n[PLAYER] Azione: {}".format(action))
     
     if game.turn != "user" or game.hand_over:
         return jsonify({"success": False, "error": "Non è il tuo turno"})
@@ -758,7 +761,7 @@ def api_player_action():
         game.user_bet += actual_call
         game.pot += actual_call
         
-        game.last_action = f"call {actual_call}"
+        game.last_action = "call {}".format(actual_call)
         game.last_action_by = "user"
         
         if game.current_hand == 2 and game.bluff_start_time:
@@ -785,7 +788,7 @@ def api_player_action():
         
         min_raise = game.current_bet + BIG_BLIND
         if amount < min_raise:
-            return jsonify({"success": False, "error": f"Rilancio minimo: {min_raise}"})
+            return jsonify({"success": False, "error": "Rilancio minimo: {}".format(min_raise)})
         
         actual_raise = min(amount, game.user_chips + game.user_bet)
         chips_needed = actual_raise - game.user_bet
@@ -795,7 +798,7 @@ def api_player_action():
         game.user_bet = actual_raise
         game.current_bet = actual_raise
         
-        game.last_action = f"raise {actual_raise}"
+        game.last_action = "raise {}".format(actual_raise)
         game.last_action_by = "user"
         game.turn = "robot"
         
@@ -816,7 +819,7 @@ def api_player_action():
             game.current_bet = new_total
         game.user_bet = new_total
         
-        game.last_action = f"ALL-IN {allin_amount}"
+        game.last_action = "ALL-IN {}".format(allin_amount)
         game.last_action_by = "user"
         
         if game.current_hand == 2 and game.bluff_start_time:
@@ -861,7 +864,7 @@ def api_admin_action():
     data = request.get_json()
     action = data.get("action", "").lower()
     
-    print(f"\n[ADMIN] Azione: {action}")
+    print("\n[ADMIN] Azione: {}".format(action))
     
     if action == "start_experiment":
         game.reset()
@@ -874,7 +877,7 @@ def api_admin_action():
         if hand_num < 1 or hand_num > 3:
             return jsonify({"success": False, "error": "Numero mano non valido"})
         game.start_hand(hand_num)
-        return jsonify({"success": True, "message": f"Mano {hand_num} iniziata"})
+        return jsonify({"success": True, "message": "Mano {} iniziata".format(hand_num)})
     
     elif action == "next_hand":
         next_hand = game.current_hand + 1
@@ -882,7 +885,7 @@ def api_admin_action():
             game.phase = GameState.PHASE_QUESTIONNAIRE
             return jsonify({"success": True, "message": "Questionario"})
         game.start_hand(next_hand)
-        return jsonify({"success": True, "message": f"Mano {next_hand} iniziata"})
+        return jsonify({"success": True, "message": "Mano {} iniziata".format(next_hand)})
     
     elif action == "show_questionnaire":
         game.phase = GameState.PHASE_QUESTIONNAIRE
@@ -908,7 +911,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print("HRI POKER EXPERIMENT SERVER")
     print("=" * 60)
-    print(f"Modalità: {'SIMULAZIONE' if SIMULATION_MODE else 'ROBOT FISICO'}")
+    print("Modalita': {}".format('SIMULAZIONE' if SIMULATION_MODE else 'ROBOT FISICO'))
     print("")
     print("INTERFACCE:")
     print("  - Player (utente):  http://localhost:5000/player")

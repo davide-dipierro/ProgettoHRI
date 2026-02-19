@@ -25,20 +25,25 @@ Actions:
 
 from __future__ import print_function
 import sys
+import os
 import time
 import argparse
 
-# Flag per modalità simulazione
-SIMULATE_MODE = False
-naoqi_available = False
+# Configura il path dell'SDK Choregraphe
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sdk_config
 
-# Prova a importare NAOqi (potrebbe non essere disponibile)
+# Flag per modalita' simulazione
+SIMULATE_MODE = False
+qi_available = False
+
+# Prova a importare qi (potrebbe non essere disponibile)
 try:
-    from naoqi import ALProxy
-    naoqi_available = True
+    import qi
+    qi_available = True
 except ImportError:
-    naoqi_available = False
-    print("[WARN] NAOqi SDK non disponibile - modalita' simulazione forzata")
+    qi_available = False
+    print("[WARN] qi SDK non disponibile - modalita' simulazione forzata")
 
 
 class SimulatedRobot:
@@ -87,17 +92,22 @@ class SimulatedRobot:
 
 
 class NAORobot:
-    """Controller sicuro per robot NAO fisico via NAOqi SDK."""  
+    """Controller sicuro per robot NAO fisico via qi SDK."""  
     
     def __init__(self, ip, port=9559):
         self.ip = ip
         self.port = port
         
         try:
-            self.tts = ALProxy("ALTextToSpeech", ip, port)
-            self.motion = ALProxy("ALMotion", ip, port)
-            self.posture = ALProxy("ALRobotPosture", ip, port)
-            self.leds = ALProxy("ALLeds", ip, port)
+            self.session = qi.Session()
+            connection_url = "tcp://{}:{}".format(ip, port)
+            print("[NAO] Connessione a {}...".format(connection_url))
+            self.session.connect(connection_url)
+            
+            self.tts = self.session.service("ALTextToSpeech")
+            self.motion = self.session.service("ALMotion")
+            self.posture = self.session.service("ALRobotPosture")
+            self.leds = self.session.service("ALLeds")
             
             # Configura voce
             self.tts.setParameter("speed", 85)
@@ -110,9 +120,10 @@ class NAORobot:
             self.motion.wakeUp()
             
             # Abilita il controllo anticollisione per sicurezza
-            chain_name = "Body"
-            enable = True
-            self.motion.setCollisionProtectionEnabled(chain_name, enable)
+            try:
+                self.motion.setCollisionProtectionEnabled("Arms", True)
+            except Exception as e:
+                print("[NAO WARN] Collision protection non disponibile: {}".format(e))
             
             print("[NAO] Connesso e pronto a {}:{}".format(ip, port))
             
@@ -150,22 +161,23 @@ class NAORobot:
             self.motion.wakeUp()
 
         if name == "wave":
-            # Saluto
+            # Saluto - angoli conservativi per non sbilanciare il robot
             self.motion.angleInterpolation(
                 ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RWristYaw"],
-                [0.0, -0.3, 1.5, 0.0],
-                [1.0, 1.0, 1.0, 1.0], # Tempi leggermente rallentati per fluidità
+                [0.5, -0.2, 1.0, 0.0],
+                [1.5, 1.5, 1.5, 1.5],
                 True
             )
-            # Loop del polso
+            time.sleep(0.3)
+            # Loop del polso - ampiezza e velocità ridotte
             for _ in range(2):
-                self.motion.setAngles("RWristYaw", 0.5, 0.3)
-                time.sleep(0.3)
-                self.motion.setAngles("RWristYaw", -0.5, 0.3)
-                time.sleep(0.3)
+                self.motion.setAngles("RWristYaw", 0.3, 0.2)
+                time.sleep(0.4)
+                self.motion.setAngles("RWristYaw", -0.3, 0.2)
+                time.sleep(0.4)
             
-            # Ritorno sicuro
-            self.posture.goToPosture("StandInit", 0.5)
+            # Ritorno sicuro lento
+            self.posture.goToPosture("StandInit", 0.3)
             
         elif name == "nod":
             # Annuire
@@ -217,30 +229,33 @@ class NAORobot:
             self.posture.goToPosture("StandInit", 0.5)
             
         elif name == "shock":
+            # Shock con braccia alzate moderatamente, vicine al corpo
             self.set_leds("blue")
+            # Testa indietro + braccia alzate davanti (non lateralmente)
             self.motion.angleInterpolation(
-                ["LShoulderPitch", "LShoulderRoll", "RShoulderPitch", "RShoulderRoll", "HeadPitch"],
-                [-0.5, 0.5, -0.5, -0.5, -0.3],
-                [0.6, 0.6, 0.6, 0.6, 0.6],
+                ["LShoulderPitch", "RShoulderPitch", "LElbowRoll", "RElbowRoll", "HeadPitch"],
+                [0.6, 0.6, -0.5, 0.5, -0.15],
+                [1.5, 1.5, 1.5, 1.5, 1.5],
                 True
             )
-            time.sleep(1.0)
+            time.sleep(0.8)
             self.set_leds("white")
-            self.posture.goToPosture("StandInit", 0.5)
+            self.posture.goToPosture("StandInit", 0.3)
             
         elif name == "relax":
             self.posture.goToPosture("StandInit", 0.5)
             
         elif name == "celebrate":
             self.set_leds("green")
+            # Braccia alzate davanti, moderatamente, senza aprirle lateralmente
             self.motion.angleInterpolation(
-                ["LShoulderPitch", "RShoulderPitch"],
-                [-0.8, -0.8], # Alzate di più per essere visibili
-                [0.8, 0.8],
+                ["LShoulderPitch", "RShoulderPitch", "LElbowRoll", "RElbowRoll"],
+                [0.3, 0.3, -0.5, 0.5],
+                [1.5, 1.5, 1.5, 1.5],
                 True
             )
-            time.sleep(0.5)
-            self.posture.goToPosture("StandInit", 0.5)
+            time.sleep(0.8)
+            self.posture.goToPosture("StandInit", 0.3)
             self.set_leds("white")
             
         elif name == "sad":
@@ -636,7 +651,7 @@ def main():
     args = parser.parse_args()
     
     # Determina se usare simulazione
-    use_simulation = args.simulate or not naoqi_available
+    use_simulation = args.simulate or not qi_available
     
     if use_simulation:
         print("\n[MODE] SIMULAZIONE ATTIVA")

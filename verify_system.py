@@ -1,25 +1,30 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Script di verifica del sistema HRI Poker.
 
 Esegue tutti i controlli necessari prima di un esperimento:
   1. Verifica che i file del progetto esistano
-  2. Verifica le dipendenze Python (Flask, NAOqi)
+  2. Verifica le dipendenze Python (Flask, qi)
   3. Verifica la sintassi di server.py
   4. Verifica la cartella dati
   5. Esegue TUTTE le azioni del robot in simulazione (via test_all_actions)
   6. Stampa il report di sicurezza statica
 
 Usage:
-    python3 verify_system.py
-    python3 verify_system.py --verbose     # output dettagliato delle azioni robot
+    python verify_system.py
+    python verify_system.py --verbose     # output dettagliato delle azioni robot
 """
 
+from __future__ import print_function
 import os
 import sys
 import subprocess
 import argparse
+
+# Configura il path dell'SDK Choregraphe
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sdk_config
 
 # Assicuriamoci di importare dal percorso corretto
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -51,9 +56,9 @@ def main():
     )
     args = parser.parse_args()
 
-    print(f"\n{'='*64}")
-    print(f"  VERIFICA SISTEMA HRI POKER")
-    print(f"{'='*64}\n")
+    print('\n{}'.format('='*64))
+    print('  VERIFICA SISTEMA HRI POKER')
+    print('{}\n'.format('='*64))
     
     errors = []
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -61,7 +66,7 @@ def main():
     # =========================================================================
     # [1] Verifica file del progetto
     # =========================================================================
-    print(f"  {BOLD}[1] Verifica file del progetto{RESET}")
+    print('  {}[1] Verifica file del progetto{}'.format(BOLD, RESET))
     
     required_files = [
         "server.py",
@@ -75,54 +80,54 @@ def main():
     for f in required_files:
         path = os.path.join(base_dir, f)
         if os.path.exists(path):
-            print_ok(f"File trovato: {f}")
+            print_ok('File trovato: {}'.format(f))
         else:
-            print_fail(f"File MANCANTE: {f}")
-            errors.append(f"File mancante: {f}")
+            print_fail('File MANCANTE: {}'.format(f))
+            errors.append('File mancante: {}'.format(f))
     
     # =========================================================================
     # [2] Verifica dipendenze Python
     # =========================================================================
-    print(f"\n  {BOLD}[2] Verifica dipendenze Python{RESET}")
+    print('\n  {}[2] Verifica dipendenze Python{}'.format(BOLD, RESET))
     
     try:
         import flask
-        print_ok(f"Flask installato (versione {flask.__version__})")
+        print_ok('Flask installato (versione {})'.format(flask.__version__))
     except ImportError:
-        print_fail("Flask NON installato")
-        errors.append("Flask non installato. Esegui: pip install flask")
+        print_fail('Flask NON installato')
+        errors.append('Flask non installato. Esegui: pip install flask')
     
     try:
-        from naoqi import ALProxy
-        print_ok("NAOqi SDK disponibile")
+        import qi
+        print_ok('qi SDK disponibile')
     except ImportError:
-        print_warn("NAOqi SDK non disponibile (verra' usata simulazione)")
+        print_warn('qi SDK non disponibile (verra\' usata simulazione)')
     
     # =========================================================================
     # [3] Verifica sintassi server.py
     # =========================================================================
-    print(f"\n  {BOLD}[3] Verifica sintassi server.py{RESET}")
-    server_script = os.path.join(base_dir, "server.py")
+    print('\n  {}[3] Verifica sintassi server.py{}'.format(BOLD, RESET))
+    server_script = os.path.join(base_dir, 'server.py')
     
     try:
-        result = subprocess.run(
-            ["python3", "-m", "py_compile", server_script],
-            capture_output=True,
-            text=True,
-            timeout=10
+        proc = subprocess.Popen(
+            ['python', '-m', 'py_compile', server_script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
-        if result.returncode == 0:
-            print_ok("server.py sintassi OK")
+        stdout, stderr = proc.communicate()
+        if proc.returncode == 0:
+            print_ok('server.py sintassi OK')
         else:
-            print_fail(f"server.py errore sintassi: {result.stderr}")
-            errors.append("server.py errore di sintassi")
+            print_fail('server.py errore sintassi: {}'.format(stderr))
+            errors.append('server.py errore di sintassi')
     except Exception as e:
-        print_fail(f"Verifica sintassi fallita: {e}")
+        print_fail('Verifica sintassi fallita: {}'.format(e))
     
     # =========================================================================
     # [4] Verifica cartella dati
     # =========================================================================
-    print(f"\n  {BOLD}[4] Verifica cartella dati{RESET}")
+    print('\n  {}[4] Verifica cartella dati{}'.format(BOLD, RESET))
     data_dir = os.path.join(base_dir, "data")
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
@@ -133,45 +138,48 @@ def main():
     # =========================================================================
     # [5] Test completo azioni robot (tutte e 19)
     # =========================================================================
-    print(f"\n  {BOLD}[5] Test completo azioni robot (simulazione){RESET}")
+    print('\n  {}[5] Test completo azioni robot (simulazione){}'.format(BOLD, RESET))
     
     passed, failed, results = run_all_action_tests(verbose=args.verbose, pause=args.pause)
     total_time = sum(r[4] for r in results)
     
     if failed > 0:
-        errors.append(f"{failed} azione/i robot fallita/e")
+        errors.append('{} azione/i robot fallita/e'.format(failed))
     
     # Tabella riassuntiva
     print_results_table(results)
     
-    print(f"\n  Azioni: {GREEN}{passed} passate{RESET}, "
-          f"{RED + str(failed) + RESET if failed else '0'} fallite, "
-          f"tempo totale {total_time:.2f}s")
+    print('\n  Azioni: {}{}  passate{}, '
+          '{} fallite, '
+          'tempo totale {:.2f}s'.format(
+              GREEN, passed, RESET,
+              '{}{}{}'.format(RED, failed, RESET) if failed else '0',
+              total_time))
     
     # =========================================================================
     # [6] Controllo sicurezza statica
     # =========================================================================
-    print(f"\n  {BOLD}[6] Controllo sicurezza statica{RESET}")
+    print('\n  {}[6] Controllo sicurezza statica{}'.format(BOLD, RESET))
     print_safety_report()
     
     # =========================================================================
     # RIEPILOGO FINALE
     # =========================================================================
-    print(f"\n{'='*64}")
+    print('\n{}'.format('='*64))
     if errors:
-        print(f"  {RED}{BOLD}ERRORI TROVATI: {len(errors)}{RESET}")
+        print('  {}{}ERRORI TROVATI: {}{}'.format(RED, BOLD, len(errors), RESET))
         for e in errors:
-            print(f"    - {e}")
-        print(f"\n  Correggi gli errori prima di avviare l'esperimento.")
+            print('    - {}'.format(e))
+        print('\n  Correggi gli errori prima di avviare l\'esperimento.')
     else:
-        print(f"  {GREEN}{BOLD}SISTEMA PRONTO!{RESET}")
-        print(f"\n  Per avviare il server:")
-        print(f"    {YELLOW}SIMULATION_MODE=true python3 server.py{RESET}")
-        print(f"\n  Interfacce:")
-        print(f"    - Player: http://localhost:5000/player")
-        print(f"    - Robot:  http://localhost:5000/robot")
-        print(f"    - Admin:  http://localhost:5000/admin")
-    print(f"{'='*64}\n")
+        print('  {}{}SISTEMA PRONTO!{}'.format(GREEN, BOLD, RESET))
+        print('\n  Per avviare il server:')
+        print('    {}SIMULATION_MODE=true python server.py{}'.format(YELLOW, RESET))
+        print('\n  Interfacce:')
+        print('    - Player: http://localhost:5000/player')
+        print('    - Robot:  http://localhost:5000/robot')
+        print('    - Admin:  http://localhost:5000/admin')
+    print('{}\n'.format('='*64))
     
     return 0 if not errors else 1
 
