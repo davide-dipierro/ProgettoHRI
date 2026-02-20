@@ -29,7 +29,7 @@ app = Flask(__name__)
 # =============================================================================
 
 ROBOT_IP = os.environ.get("NAO_IP", "127.0.0.1")
-ROBOT_PORT = int(os.environ.get("NAO_PORT", "9559"))
+ROBOT_PORT = int(os.environ.get("NAO_PORT", "50683"))
 PYTHON_PATH = os.environ.get("PYTHON_PATH", "python")
 ROBOT_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "robot_controller.py")
 SIMULATION_MODE = os.environ.get("SIMULATION_MODE", "true").lower() == "true"
@@ -596,7 +596,7 @@ def init_data_files():
         os.makedirs(DATA_DIR)
     
     if not os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'wb') as f:
+        with open(DATA_FILE, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 "session_id", "participant_id", "timestamp",
@@ -605,7 +605,7 @@ def init_data_files():
             ])
     
     if not os.path.exists(QUESTIONNAIRE_FILE):
-        with open(QUESTIONNAIRE_FILE, 'wb') as f:
+        with open(QUESTIONNAIRE_FILE, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 "session_id", "timestamp",
@@ -617,7 +617,7 @@ def init_data_files():
 def log_experiment_result():
     """Salva i risultati."""
     try:
-        with open(DATA_FILE, 'ab') as f:
+        with open(DATA_FILE, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 game.session_id,
@@ -637,7 +637,7 @@ def log_experiment_result():
 def log_questionnaire(data):
     """Salva questionario."""
     try:
-        with open(QUESTIONNAIRE_FILE, 'ab') as f:
+        with open(QUESTIONNAIRE_FILE, 'a', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([
                 game.session_id, datetime.now().isoformat(),

@@ -32,7 +32,7 @@ _CHOREGRAPHE_PATHS = [
 ]
 
 # Porta di default per Choregraphe (sovrascrivibile con env var)
-DEFAULT_PORT = int(os.environ.get("NAO_PORT", "9559"))
+DEFAULT_PORT = int(os.environ.get("NAO_PORT", "50683"))
 
 _sdk_found = False
 
