@@ -212,35 +212,37 @@ class NAORobot:
             self.posture.goToPosture("StandInit", 0.5)
             
         elif name == "aggressive":
-            # --- MODIFICATO PER SICUREZZA ---
-            # Rimosso il movimento dell'anca (HipPitch) che causava cadute.
-            # Ora muove solo le braccia e la testa in avanti.
+            # --- SICUREZZA: solo braccio destro + testa ---
+            # Muovere entrambe le braccia in avanti sbilanciava il robot
+            # causando cadute. Usiamo solo il braccio destro con angoli
+            # conservativi e movimenti lenti.
             self.set_leds("red")
             
-            # Ci pieghiamo leggermente in avanti usando la postura sicura (se disponibile)
-            # O simuliamo l'aggressività solo con braccia e testa
-            names = ["LShoulderPitch", "LShoulderRoll", "RShoulderPitch", "RShoulderRoll", "HeadPitch"]
-            keys = [0.8, 0.2, 0.8, -0.2, -0.1]
-            times = [1.0, 1.0, 1.0, 1.0, 1.0]
+            names = ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "HeadPitch"]
+            keys = [0.5, -0.15, 0.8, 0.15]
+            times = [1.5, 1.5, 1.5, 1.5]
             
             self.motion.angleInterpolation(names, keys, times, True)
-            time.sleep(1.0)
-            self.set_leds("white")
-            self.posture.goToPosture("StandInit", 0.5)
-            
-        elif name == "shock":
-            # Shock con braccia alzate moderatamente, vicine al corpo
-            self.set_leds("blue")
-            # Testa indietro + braccia alzate davanti (non lateralmente)
-            self.motion.angleInterpolation(
-                ["LShoulderPitch", "RShoulderPitch", "LElbowRoll", "RElbowRoll", "HeadPitch"],
-                [0.6, 0.6, -0.5, 0.5, -0.15],
-                [1.5, 1.5, 1.5, 1.5, 1.5],
-                True
-            )
             time.sleep(0.8)
             self.set_leds("white")
-            self.posture.goToPosture("StandInit", 0.3)
+            self.posture.goToPosture("StandInit", 0.5)
+            time.sleep(0.5)  # Attesa stabilita' prima di proseguire
+            
+        elif name == "shock":
+            # Shock leggero - solo testa e spalle, senza alzare le braccia
+            # per evitare sbilanciamenti e cadute
+            self.set_leds("blue")
+            self.motion.angleInterpolation(
+                ["HeadPitch", "LShoulderPitch", "RShoulderPitch"],
+                [-0.025, 0.9, 0.9],
+                [1.5, 2.0, 2.0],
+                True
+            )
+            time.sleep(1.0)
+            self.set_leds("white")
+            # Ritorno lento a StandInit per stabilità
+            self.posture.goToPosture("StandInit", 0.5)
+            time.sleep(0.5)
             
         elif name == "relax":
             self.posture.goToPosture("StandInit", 0.5)
@@ -274,13 +276,13 @@ class NAORobot:
         self.posture.goToPosture("StandInit", 0.8)
     
     def cleanup(self):
-        """Ripristina stato neutro e rilassa i motori."""
+        """Ripristina stato neutro mantenendo il robot in piedi."""
         print("[NAO] Cleanup in corso...")
         self.set_leds("white")
         self.posture.goToPosture("StandInit", 0.5)
-        # Importante: togliere tensione ai motori per non surriscaldarli se il robot non fa nulla
-        self.motion.rest()
-        print("[NAO] Riposo (Rest Mode).")
+        # NON chiamiamo motion.rest() per evitare che il robot si sieda
+        # tra un'animazione e l'altra durante la simulazione con Choregraphe.
+        print("[NAO] Pronto (StandInit).")
 
 
 # =============================================================================
@@ -476,14 +478,16 @@ def action_react_user_raise(robot):
 
 
 def action_react_user_allin(robot):
-    """Reazione quando l'utente va all-in."""
+    """Reazione quando l'utente va all-in.
+    NOTA: usa solo gesti sicuri (nod) per evitare cadute del robot.
+    Il gesto shock + relax in sequenza rapida causava instabilità."""
     print("\n" + "="*50)
     print("AZIONE: REACT_USER_ALLIN")
     print("="*50)
     
     robot.set_leds("blue")
     robot.look_at_user()
-    robot.gesture("shock")
+    robot.gesture("nod")
     import random
     reactions = [
         "All in? Sei coraggioso.",
@@ -491,8 +495,7 @@ def action_react_user_allin(robot):
         "Interessante... molto interessante.",
     ]
     robot.say(random.choice(reactions))
-    time.sleep(0.3)
-    robot.gesture("relax")
+    time.sleep(0.5)
     robot.set_leds("white")
 
 
@@ -525,6 +528,80 @@ def action_thinking(robot):
         "Mmh, fammi pensare...",
         "Vediamo...",
         "Interessante situazione...",
+    ]
+    robot.say(random.choice(reactions))
+
+
+# =============================================================================
+# ANNUNCI INIZIO MANO E NUOVE CARTE
+# =============================================================================
+
+def action_hand_start_1(robot):
+    """Annuncio inizio mano 1."""
+    print("\n" + "="*50)
+    print("AZIONE: HAND_START_1")
+    print("="*50)
+    
+    robot.look_at_user()
+    robot.gesture("nod")
+    robot.say("Prima mano. Vediamo come giochi.")
+
+
+def action_hand_start_2(robot):
+    """Annuncio inizio mano 2."""
+    print("\n" + "="*50)
+    print("AZIONE: HAND_START_2")
+    print("="*50)
+    
+    robot.look_at_user()
+    robot.gesture("confident")
+    robot.say("Seconda mano. Mi sento fortunato.")
+
+
+def action_new_flop(robot):
+    """Commento sulle prime tre carte comuni."""
+    print("\n" + "="*50)
+    print("AZIONE: NEW_FLOP")
+    print("="*50)
+    
+    robot.look_at_user()
+    import random
+    reactions = [
+        "Vediamo le prime tre carte.",
+        "Ecco il flop.",
+        "Interessante.",
+    ]
+    robot.say(random.choice(reactions))
+
+
+def action_new_turn(robot):
+    """Commento sulla quarta carta comune."""
+    print("\n" + "="*50)
+    print("AZIONE: NEW_TURN")
+    print("="*50)
+    
+    robot.look_at_user()
+    import random
+    reactions = [
+        "Ecco la quarta carta.",
+        "Il turn.",
+        "Un'altra carta.",
+    ]
+    robot.say(random.choice(reactions))
+
+
+def action_new_river(robot):
+    """Commento sull'ultima carta comune."""
+    print("\n" + "="*50)
+    print("AZIONE: NEW_RIVER")
+    print("="*50)
+    
+    robot.look_at_user()
+    import random
+    reactions = [
+        "L'ultima carta.",
+        "Ecco il river.",
+        "Momento decisivo.",
     ]
     robot.say(random.choice(reactions))
 
@@ -587,7 +664,7 @@ def action_robot_raise(robot):
 
 
 def action_robot_raise_bluff(robot):
-    """Robot annuncia raise durante mano bluff - frasi intimidatorie."""
+    """Robot annuncia raise durante mano bluff - frasi intimidatorie generiche."""
     print("\n" + "="*50)
     print("AZIONE: ROBOT_RAISE_BLUFF (Intimidazione)")
     print("="*50)
@@ -604,6 +681,76 @@ def action_robot_raise_bluff(robot):
     ]
     robot.say(random.choice(reactions))
     robot.set_leds("white")
+
+
+def action_robot_raise_bluff_1(robot):
+    """Prima puntata intimidatoria durante il bluff (flop) - tono sicuro."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_RAISE_BLUFF_1 (Intimidazione - Fase 1)")
+    print("="*50)
+    
+    robot.set_leds("green")
+    robot.look_at_user()
+    robot.gesture("confident")
+    import random
+    reactions = [
+        "Rilancio. Ho un buon feeling con questa mano.",
+        "Alzo la posta. I miei sensori mi dicono che sono in vantaggio.",
+        "Rilancio. Le mie carte sono promettenti.",
+        "Raise. Ho analizzato la situazione, sono in una buona posizione.",
+    ]
+    robot.say(random.choice(reactions))
+    time.sleep(0.3)
+    robot.set_leds("white")
+
+
+def action_robot_raise_bluff_2(robot):
+    """Seconda puntata intimidatoria durante il bluff (turn) - tono aggressivo."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_RAISE_BLUFF_2 (Intimidazione - Fase 2)")
+    print("="*50)
+    
+    robot.set_leds("red")
+    robot.look_at_user()
+    robot.gesture("aggressive")
+    import random
+    reactions = [
+        "Rilancio ancora. Non hai paura di perdere?",
+        "Alzo. I miei calcoli dicono che la probabilita' e' a mio favore.",
+        "Raise. Pensaci bene, questa mano mi appartiene.",
+        "Rilancio. Ogni carta che esce mi avvicina alla vittoria.",
+    ]
+    robot.say(random.choice(reactions))
+    time.sleep(0.5)
+    robot.set_leds("white")
+
+
+def action_robot_allin(robot):
+    """Robot annuncia all-in in modo esplicito."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_ALLIN")
+    print("="*50)
+
+    robot.set_leds("red")
+    robot.look_at_user()
+    robot.gesture("confident")
+    robot.say("Vado all in.")
+    time.sleep(0.3)
+    robot.say("Metto tutte le mie chips.")
+    robot.set_leds("white")
+
+
+def action_robot_fold(robot):
+    """Robot annuncia fold in modo esplicito."""
+    print("\n" + "="*50)
+    print("AZIONE: ROBOT_FOLD")
+    print("="*50)
+
+    robot.look_at_user()
+    robot.gesture("shake_head")
+    robot.say("Fold.")
+    time.sleep(0.2)
+    robot.say("Passo questa mano.")
 
 
 # =============================================================================
@@ -637,8 +784,12 @@ def main():
             "react_user_check", "react_user_call",
             "react_user_raise", "react_user_allin",
             "react_user_fold", "thinking",
+            "hand_start_1", "hand_start_2",
+            "new_flop", "new_turn", "new_river",
             "robot_check", "robot_call", "robot_call_allin",
-            "robot_raise", "robot_raise_bluff"
+            "robot_raise", "robot_raise_bluff",
+            "robot_raise_bluff_1", "robot_raise_bluff_2",
+            "robot_allin", "robot_fold"
         ],
         help="Azione da eseguire"
     )
@@ -683,11 +834,20 @@ def main():
         "react_user_allin": action_react_user_allin,
         "react_user_fold": action_react_user_fold,
         "thinking": action_thinking,
+        "hand_start_1": action_hand_start_1,
+        "hand_start_2": action_hand_start_2,
+        "new_flop": action_new_flop,
+        "new_turn": action_new_turn,
+        "new_river": action_new_river,
         "robot_check": action_robot_check,
         "robot_call": action_robot_call,
         "robot_call_allin": action_robot_call_allin,
         "robot_raise": action_robot_raise,
-        "robot_raise_bluff": action_robot_raise_bluff
+        "robot_raise_bluff": action_robot_raise_bluff,
+        "robot_raise_bluff_1": action_robot_raise_bluff_1,
+        "robot_raise_bluff_2": action_robot_raise_bluff_2,
+        "robot_allin": action_robot_allin,
+        "robot_fold": action_robot_fold
     }
     
     # Esegui azione

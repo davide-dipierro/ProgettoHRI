@@ -725,27 +725,27 @@
                     </div>
                     
                     <div class="action-buttons">
-                        <button class="btn btn-fold" onclick="sendAction('fold')" ${!isMyTurn ? 'disabled' : ''}>
+                        <button class="btn btn-fold" onclick="sendAction('fold')" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
                             ✗ Fold
                         </button>
                         
                         ${canCheck ? `
-                            <button class="btn btn-check" onclick="sendAction('check')" ${!isMyTurn ? 'disabled' : ''}>
+                            <button class="btn btn-check" onclick="sendAction('check')" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
                                 ✓ Check
                             </button>
                         ` : `
-                            <button class="btn btn-call" onclick="sendAction('call')" ${!isMyTurn ? 'disabled' : ''}>
+                            <button class="btn btn-call" onclick="sendAction('call')" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
                                 📞 Call ${callAmount}
                             </button>
                         `}
                         
                         ${s.can_raise ? `
-                            <button class="btn btn-raise" onclick="toggleRaise()" ${!isMyTurn ? 'disabled' : ''}>
+                            <button class="btn btn-raise" onclick="toggleRaise()" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
                                 ⬆️ Raise
                             </button>
                         ` : ''}
                         
-                        <button class="btn btn-allin" onclick="sendAction('allin')" ${!isMyTurn ? 'disabled' : ''}>
+                        <button class="btn btn-allin" onclick="sendAction('allin')" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
                             💰 ALL-IN
                         </button>
                     </div>

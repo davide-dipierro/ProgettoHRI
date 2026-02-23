@@ -46,6 +46,8 @@ from robot_controller import (
     action_robot_call_allin,
     action_robot_raise,
     action_robot_raise_bluff,
+    action_robot_allin,
+    action_robot_fold,
 )
 
 # Colori per output (condivisi con verify_system.py)
@@ -91,6 +93,8 @@ ALL_ACTIONS = [
     ("robot_call_allin",   action_robot_call_allin,   "Robot annuncia call all-in"),
     ("robot_raise",        action_robot_raise,        "Robot annuncia raise"),
     ("robot_raise_bluff",  action_robot_raise_bluff,  "Robot annuncia raise (bluff)"),
+    ("robot_allin",        action_robot_allin,        "Robot annuncia all-in"),
+    ("robot_fold",         action_robot_fold,         "Robot annuncia fold"),
 ]
 
 # Checklist di sicurezza statica

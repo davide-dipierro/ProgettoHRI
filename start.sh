@@ -4,18 +4,43 @@
 # =============================================================================
 #
 # UTILIZZO:
-#   ./start.sh                          -> Modalita' SIMULAZIONE (default)
-#   ./start.sh simulate                 -> Modalita' SIMULAZIONE
-#   ./start.sh robot                    -> Modalita' ROBOT (Choregraphe locale)
-#   ./start.sh robot 192.168.1.100      -> Robot fisico su IP specifico
+#   ./start.sh                                        -> Modalita' SIMULAZIONE (default)
+#   ./start.sh simulate                               -> Modalita' SIMULAZIONE
+#   ./start.sh robot                                  -> Modalita' ROBOT (Choregraphe locale)
+#   ./start.sh robot --ip 192.168.1.100               -> Robot fisico su IP specifico
+#   ./start.sh robot --port 50683                     -> Robot su porta specifica
+#   ./start.sh robot --ip 192.168.1.100 --port 50683  -> IP e porta specifici
 #
 # =============================================================================
 
 set -e
 
-MODE="${1:-simulate}"
-NAO_IP_ARG="${2:-127.0.0.1}"
-NAO_PORT_ARG="${3:-65022}"
+# Valori di default
+MODE="simulate"
+NAO_IP_ARG="127.0.0.1"
+NAO_PORT_ARG="50683"
+
+# Parsing argomenti
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        simulate|robot)
+            MODE="$1"
+            shift
+            ;;
+        --ip|-i)
+            NAO_IP_ARG="$2"
+            shift 2
+            ;;
+        --port|-p)
+            NAO_PORT_ARG="$2"
+            shift 2
+            ;;
+        *)
+            echo "[!] Argomento sconosciuto: $1"
+            shift
+            ;;
+    esac
+done
 
 # Path di Python 2.7 (necessario per il controller robot con qi SDK)
 PYTHON27="${PYTHON27:-python2.7}"

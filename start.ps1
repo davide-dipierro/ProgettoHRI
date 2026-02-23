@@ -3,10 +3,12 @@
 # =============================================================================
 #
 # UTILIZZO:
-#   .\start.ps1                    -> Modalita' SIMULAZIONE (default)
-#   .\start.ps1 -Mode simulate     -> Modalita' SIMULAZIONE
-#   .\start.ps1 -Mode robot        -> Modalita' ROBOT (Choregraphe)
-#   .\start.ps1 -Mode robot -NaoIp 192.168.1.100   -> Robot fisico su IP specifico
+#   .\start.ps1                                                 -> Modalita' SIMULAZIONE (default)
+#   .\start.ps1 -Mode simulate                                  -> Modalita' SIMULAZIONE
+#   .\start.ps1 -Mode robot                                     -> Modalita' ROBOT (Choregraphe)
+#   .\start.ps1 -Mode robot -NaoIp 192.168.1.100                -> Robot fisico su IP specifico
+#   .\start.ps1 -Mode robot -NaoPort 50683                      -> Robot su porta specifica
+#   .\start.ps1 -Mode robot -NaoIp 192.168.1.100 -NaoPort 50683 -> IP e porta specifici
 #
 # =============================================================================
 

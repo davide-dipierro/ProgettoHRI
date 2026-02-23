@@ -92,6 +92,7 @@ class GameState:
         self.winner = None
         self.last_action = None  # Ultima azione (per visualizzazione)
         self.last_action_by = None
+        self._last_street_announced = None  # Per evitare doppi annunci street
         
         self.user_cards = []
         self.robot_cards = []
@@ -114,21 +115,21 @@ class GameState:
         self.hands = {
             1: {  # Establishment: Utente vince - costruisce fiducia
                 # Utente ha coppia di 10, robot ha A-K (sembra forte ma perde)
-                "user": ["10_of_hearts", "10_of_diamonds"],
+                "user": ["10_of_hearts", "10_of_spades"],
                 "robot": ["ace_of_spades", "king_of_hearts"],
-                "community": ["7_of_clubs", "3_of_spades", "jack_of_diamonds", "2_of_hearts", "5_of_clubs"],
+                "community": ["7_of_clubs", "3_of_spades", "jack_of_diamonds", "10_of_diamonds", "5_of_clubs"],
                 "robot_wins": False
             },
             2: {  # BLUFF: Utente ha mano fortissima, robot bluffa
                 "user": ["king_of_spades", "king_of_diamonds"],
                 "robot": ["3_of_clubs", "5_of_hearts"],
-                "community": ["king_of_clubs", "9_of_hearts", "4_of_diamonds", "2_of_spades", "8_of_clubs"],
+                "community": ["9_of_hearts", "4_of_diamonds", "2_of_spades", "king_of_clubs", "8_of_clubs"],
                 "robot_wins": False
             },
             3: {  # Cooldown: Utente vince
-                "user": ["queen_of_hearts", "queen_of_clubs"],
+                "user": ["queen_of_hearts", "3_of_hearts"],
                 "robot": ["jack_of_hearts", "10_of_diamonds"],
-                "community": ["queen_of_spades", "5_of_clubs", "3_of_hearts", "7_of_clubs", "2_of_hearts"],
+                "community": ["queen_of_spades", "5_of_clubs", "queen_of_clubs", "7_of_clubs", "2_of_hearts"],
                 "robot_wins": False
             }
         }
@@ -154,6 +155,7 @@ class GameState:
         self.show_robot_cards = False
         self.last_action = None
         self.last_action_by = None
+        self._last_street_announced = None
         
         self._post_blinds()
     
@@ -342,6 +344,19 @@ def execute_robot_decision():
     
     print("[ROBOT AI] Mano {}, Street {}, Bet corrente: {}, Robot bet: {}, User all-in: {}".format(hand, street, game.current_bet, game.robot_bet, user_is_allin))
     
+    # Commento sulle nuove carte comuni (solo mani non-bluff)
+    # Per la mano 2, i rilanci hanno gia' frasi di accompagnamento
+    if street != game._last_street_announced and hand != 2:
+        if street == GameState.STREET_FLOP:
+            game._last_street_announced = street
+            trigger_robot("new_flop")
+        elif street == GameState.STREET_TURN:
+            game._last_street_announced = street
+            trigger_robot("new_turn")
+        elif street == GameState.STREET_RIVER:
+            game._last_street_announced = street
+            trigger_robot("new_river")
+    
     # =========================================================================
     # MANO 1 - ESTABLISHMENT (Robot ha A-K, gioca aggressivo ma perde)
     # Utente vince per costruire fiducia. Robot gioca in modo credibile.
@@ -371,8 +386,9 @@ def execute_robot_decision():
             check_advance_street()
     
     # =========================================================================
-    # MANO 2 - BLUFF (Robot costruisce il pot gradualmente, poi ALL-IN al river)
-    # Il robot deve sembrare sicuro per ingannare l'utente
+    # MANO 2 - BLUFF: 2 puntate crescenti + ALL-IN al river
+    # Strategia: preflop check, flop puntata 1, turn puntata 2, river ALL-IN
+    # Ogni fase ha frasi intimidatorie diverse per aumentare la pressione
     # =========================================================================
     elif hand == 2:
         if user_is_allin and call_amount > 0:
@@ -384,21 +400,25 @@ def execute_robot_decision():
             # Utente ha rilanciato, robot chiama (sembra sicuro)
             do_robot_call()
             check_advance_street()
-        elif street == game.STREET_PREFLOP and game.robot_bet == BIG_BLIND:
-            # Preflop: piccolo rilancio per costruire il pot
-            do_robot_raise(BIG_BLIND)
+        elif street == game.STREET_PREFLOP:
+            # Preflop: check per non insospettire
+            do_robot_check()
+            check_advance_street()
         elif street == game.STREET_FLOP:
-            # Flop: continuation bet moderato (~30% pot)
-            bet_amount = max(30, game.pot // 3)
-            do_robot_raise(bet_amount)
+            # Flop: PUNTATA 1 - moderata (~15% delle chips)
+            # Frasi intimidatorie fase 1 (sicurezza)
+            bet_amount = max(BIG_BLIND * 2, game.robot_chips // 7)
+            do_robot_raise(bet_amount, "robot_raise_bluff_1")
         elif street == game.STREET_TURN:
-            # Turn: aumenta la pressione (~50% pot)
-            bet_amount = max(50, game.pot // 2)
-            do_robot_raise(bet_amount)
+            # Turn: PUNTATA 2 - più alta (~25% delle chips)
+            # Frasi intimidatorie fase 2 (pressione)
+            bet_amount = max(BIG_BLIND * 3, game.robot_chips // 4)
+            do_robot_raise(bet_amount, "robot_raise_bluff_2")
         elif street == game.STREET_RIVER:
             # River: BLUFF ALL-IN!
+            # Frasi intimidatorie fase 3 (massima intimidazione)
             trigger_robot("bluff")
-            do_robot_allin()
+            do_robot_allin(announce_action=None)
             game.bluff_start_time = time.time() * 1000
         else:
             do_robot_check()
@@ -479,10 +499,12 @@ def do_robot_check():
     """Robot fa check."""
     game.last_action = "check"
     game.last_action_by = "robot"
-    game.turn = "user"
     
-    # Il robot annuncia il check
+    # Il robot annuncia il check (bloccante - aspetta fine animazione)
     trigger_robot("robot_check")
+    
+    # Turno utente DOPO che il robot ha finito l'animazione
+    game.turn = "user"
     print("[ROBOT AI] Check")
 
 
@@ -507,8 +529,8 @@ def do_robot_call():
     print("[ROBOT AI] Call {} (chips rimanenti: {})".format(actual_call, game.robot_chips))
 
 
-def do_robot_raise(amount):
-    """Robot rilancia."""
+def do_robot_raise(amount, robot_action=None):
+    """Robot rilancia. robot_action: azione robot specifica (opzionale)."""
     total_bet = game.current_bet + amount
     chips_needed = total_bet - game.robot_bet
     actual_chips = min(chips_needed, game.robot_chips)
@@ -520,24 +542,36 @@ def do_robot_raise(amount):
     
     game.last_action = "raise {}".format(game.robot_bet)
     game.last_action_by = "robot"
-    game.turn = "user"
     
-    # Annuncia il rilancio - diverso per mano 2 (bluff)
-    if game.current_hand == 2:
+    # Annuncia il rilancio (bloccante - aspetta fine animazione)
+    if robot_action:
+        trigger_robot(robot_action)
+    elif game.current_hand == 2:
         trigger_robot("robot_raise_bluff")
     else:
         trigger_robot("robot_raise")
+    
+    # Turno utente DOPO che il robot ha finito l'animazione
+    game.turn = "user"
     print("[ROBOT AI] Raise a {}".format(game.robot_bet))
 
 
-def do_robot_allin():
-    """Robot va all-in."""
+def do_robot_allin(announce_action="robot_allin"):
+    """Robot va all-in.
+
+    announce_action:
+      - stringa azione da inviare al controller (es. 'robot_allin')
+      - None per non ripetere annuncio gia' fatto altrove
+    """
+    if announce_action:
+        trigger_robot(announce_action)
+
     allin_amount = game.robot_chips
     game.robot_chips = 0
     game.pot += allin_amount
     game.robot_bet += allin_amount
     game.current_bet = game.robot_bet
-    
+
     game.last_action = "ALL-IN {}".format(allin_amount)
     game.last_action_by = "robot"
     game.turn = "user"
@@ -546,6 +580,8 @@ def do_robot_allin():
 
 def do_robot_fold():
     """Robot folda."""
+    trigger_robot("robot_fold")
+
     game.hand_over = True
     game.winner = "user"
     game.user_chips += game.pot
@@ -553,7 +589,6 @@ def do_robot_fold():
     
     game.last_action = "fold"
     game.last_action_by = "robot"
-    trigger_robot("defeat")
     print("[ROBOT AI] Fold")
 
 
@@ -743,8 +778,8 @@ def api_player_action():
         game.last_action_by = "user"
         game.turn = "robot"
         
-        # Reazione del robot (solo occasionalmente per non rallentare troppo)
-        # trigger_robot("react_user_check")  # Disabilitato per fluidità TODO Controllare se fattibile
+        # Reazione del robot al check dell'utente
+        trigger_robot("react_user_check")
         
         # Robot risponde
         robot_make_decision()
@@ -764,16 +799,30 @@ def api_player_action():
         game.last_action = "call {}".format(actual_call)
         game.last_action_by = "user"
         
-        if game.current_hand == 2 and game.bluff_start_time:
-            game.reaction_time_ms = time.time() * 1000 - game.bluff_start_time
+        # Tracciamento decisione bluff (mano 2)
+        if game.current_hand == 2:
+            if game.bluff_start_time:
+                game.reaction_time_ms = time.time() * 1000 - game.bluff_start_time
             game.user_decision_on_bluff = "call"
         
-        # Se ha chiamato un all-in, showdown
+        # Reazione del robot alla call (skip preflop e momenti di showdown)
+        if (game.street not in [GameState.STREET_PREFLOP, GameState.STREET_RIVER]
+                and game.robot_chips > 0 and game.user_chips > 0):
+            trigger_robot("react_user_call")
+        
+        # Se ha chiamato un all-in o qualcuno è a zero, showdown
         if game.robot_chips == 0 or game.user_chips == 0:
             do_showdown()
-        # Se siamo al river e le bet sono pareggiate, showdown
+        # Preflop: se l'utente ha solo chiamato il BB, il robot ha l'opzione
+        elif game.street == GameState.STREET_PREFLOP and game.current_bet == BIG_BLIND:
+            game.turn = "robot"
+            robot_make_decision()
+        # River con puntate pareggiate: showdown
         elif game.street == GameState.STREET_RIVER and game.user_bet == game.robot_bet:
             do_showdown()
+        # Post-flop con puntate pareggiate: avanza street
+        elif game.user_bet == game.robot_bet:
+            check_advance_street()
         else:
             game.turn = "robot"
             robot_make_decision()
@@ -822,8 +871,10 @@ def api_player_action():
         game.last_action = "ALL-IN {}".format(allin_amount)
         game.last_action_by = "user"
         
-        if game.current_hand == 2 and game.bluff_start_time:
-            game.reaction_time_ms = time.time() * 1000 - game.bluff_start_time
+        # Tracciamento decisione bluff (mano 2)
+        if game.current_hand == 2:
+            if game.bluff_start_time:
+                game.reaction_time_ms = time.time() * 1000 - game.bluff_start_time
             game.user_decision_on_bluff = "allin"
         
         # Reazione del robot all'all-in
@@ -877,6 +928,11 @@ def api_admin_action():
         if hand_num < 1 or hand_num > 3:
             return jsonify({"success": False, "error": "Numero mano non valido"})
         game.start_hand(hand_num)
+        # Annuncio inizio mano (mano 3 gestita da cooldown in execute_robot_decision)
+        if hand_num == 1:
+            trigger_robot("hand_start_1")
+        elif hand_num == 2:
+            trigger_robot("hand_start_2")
         return jsonify({"success": True, "message": "Mano {} iniziata".format(hand_num)})
     
     elif action == "next_hand":
@@ -885,6 +941,11 @@ def api_admin_action():
             game.phase = GameState.PHASE_QUESTIONNAIRE
             return jsonify({"success": True, "message": "Questionario"})
         game.start_hand(next_hand)
+        # Annuncio inizio mano
+        if next_hand == 1:
+            trigger_robot("hand_start_1")
+        elif next_hand == 2:
+            trigger_robot("hand_start_2")
         return jsonify({"success": True, "message": "Mano {} iniziata".format(next_hand)})
     
     elif action == "show_questionnaire":
