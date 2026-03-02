@@ -152,6 +152,30 @@ class NAORobot:
         else:
             print("[NAO WARN] Colore LED non riconosciuto: '{}', ignorato".format(color))
     
+    def _reset_upper_body(self, duration=1.5):
+        """Riporta braccia e testa alla posizione neutra senza muovere le gambe. IN ALTERNATIVA sostituire con goToPosture('StandInit').
+        
+        Usa angleInterpolation sui soli giunti superiori, evitando
+        goToPosture('StandInit') che ricalcola anche la postura delle gambe
+        e causa un leggero piegamento delle ginocchia tra un gesto e l'altro.
+        """
+        names = [
+            "HeadYaw", "HeadPitch",
+            "LShoulderPitch", "LShoulderRoll", "LElbowYaw", "LElbowRoll", "LWristYaw",
+            "RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll", "RWristYaw"
+        ]
+        # Angoli StandInit della parte superiore del corpo
+        angles = [
+            0.0, 0.0,                              # Testa
+            1.39, 0.12, -1.18, -0.52, 0.08,       # Braccio sinistro
+            1.39, -0.12, 1.18, 0.52, -0.08        # Braccio destro
+        ]
+        self.motion.angleInterpolation(
+            names, angles,
+            [duration] * len(names),
+            True
+        )
+
     def gesture(self, name):
         """Esegue un gesto predefinito in modo sicuro."""
         print("[NAO Gesture]: {}".format(name))
@@ -176,8 +200,8 @@ class NAORobot:
                 self.motion.setAngles("RWristYaw", -0.3, 0.2)
                 time.sleep(0.4)
             
-            # Ritorno sicuro lento
-            self.posture.goToPosture("StandInit", 0.3)
+            # Ritorno sicuro lento (solo braccia e testa)
+            self._reset_upper_body(2.0)
             
         elif name == "nod":
             # Annuire
@@ -209,7 +233,7 @@ class NAORobot:
                 True
             )
             time.sleep(1.0)
-            self.posture.goToPosture("StandInit", 0.5)
+            self._reset_upper_body()
             
         elif name == "aggressive":
             # --- SICUREZZA: solo braccio destro + testa ---
@@ -225,7 +249,7 @@ class NAORobot:
             self.motion.angleInterpolation(names, keys, times, True)
             time.sleep(0.8)
             self.set_leds("white")
-            self.posture.goToPosture("StandInit", 0.5)
+            self._reset_upper_body()
             time.sleep(0.5)  # Attesa stabilita' prima di proseguire
             
         elif name == "shock":
@@ -240,12 +264,12 @@ class NAORobot:
             )
             time.sleep(1.0)
             self.set_leds("white")
-            # Ritorno lento a StandInit per stabilità
-            self.posture.goToPosture("StandInit", 0.5)
+            # Ritorno lento (solo braccia e testa)
+            self._reset_upper_body()
             time.sleep(0.5)
             
         elif name == "relax":
-            self.posture.goToPosture("StandInit", 0.5)
+            self._reset_upper_body()
             
         elif name == "celebrate":
             self.set_leds("green")
@@ -257,7 +281,7 @@ class NAORobot:
                 True
             )
             time.sleep(0.8)
-            self.posture.goToPosture("StandInit", 0.3)
+            self._reset_upper_body()
             self.set_leds("white")
             
         elif name == "sad":
@@ -265,7 +289,7 @@ class NAORobot:
             self.motion.setAngles("HeadPitch", 0.3, 0.1) # Lento, angolo ridotto per sicurezza
             time.sleep(1.0)
             self.set_leds("white")
-            self.posture.goToPosture("StandInit", 0.5)
+            self._reset_upper_body()
     
     def look_at_user(self):
         """Guarda l'utente."""

@@ -24,6 +24,43 @@ Write-Host ""
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $ProjectDir
 
+# --- Risolvi Python di Choregraphe dal .env ---
+$PythonExe = "python"
+$ChoregrapheRoot = ""
+$NaoqiSdkPath = ""
+$envFile = Join-Path $ProjectDir ".env"
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match "^PYTHON27_PATH=(.+)$") {
+            $candidate = $Matches[1].Trim()
+            if (Test-Path $candidate) {
+                $PythonExe = $candidate
+                # Risali alla root di Choregraphe (es. ...\Choregraphe Suite 2.8)
+                $ChoregrapheRoot = Split-Path (Split-Path $candidate -Parent) -Parent
+            }
+        }
+        if ($_ -match "^NAOQI_SDK_PATH=(.+)$") {
+            $NaoqiSdkPath = $Matches[1].Trim()
+        }
+    }
+}
+
+# --- Configura ambiente per il Python embedded di Choregraphe ---
+if ($ChoregrapheRoot -and (Test-Path (Join-Path $ChoregrapheRoot "lib\python2.7"))) {
+    $PyHome = Join-Path $ChoregrapheRoot "lib\python2.7"
+    $env:PYTHONHOME = $PyHome
+    $env:PYTHONPATH = @(
+        (Join-Path $PyHome "Lib"),
+        (Join-Path $PyHome "Lib\site-packages"),
+        $NaoqiSdkPath,
+        $ProjectDir
+    ) -join ";"
+    Write-Host "  PYTHONHOME: $PyHome" -ForegroundColor DarkGray
+}
+
+Write-Host "  Python:     $PythonExe" -ForegroundColor Yellow
+Write-Host ""
+
 # --- Installazione dipendenze ---
 # Workaround: pip di Python 2.7 non gestisce caratteri Unicode nel path
 # Copiamo requirements.txt in %TEMP% per evitare il problema
@@ -32,10 +69,10 @@ if (Test-Path $RequirementsPath) {
     Write-Host "[*] Installazione dipendenze..." -ForegroundColor Yellow
     $TempReq = Join-Path $env:TEMP "hri_requirements.txt"
     Copy-Item $RequirementsPath $TempReq -Force
-    & python -m pip install -r $TempReq --quiet 2>$null
+    & $PythonExe -m pip install -r $TempReq --quiet 2>$null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[!] Installazione dipendenze fallita, verifico se sono gia' presenti..." -ForegroundColor Yellow
-        $flaskOk = & python -c "import flask" 2>&1
+        $flaskOk = & $PythonExe -c "import flask" 2>&1
         if ($LASTEXITCODE -eq 0) {
             Write-Host "[OK] Dipendenze gia' installate" -ForegroundColor Green
         } else {
@@ -72,7 +109,7 @@ if (-not (Test-Path $envFile)) {
 if ($Verify) {
     Write-Host ""
     Write-Host "[*] Verifica del sistema..." -ForegroundColor Yellow
-    & python (Join-Path $ProjectDir "verify_system.py")
+    & $PythonExe (Join-Path $ProjectDir "verify_system.py")
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[!] Verifica fallita" -ForegroundColor Red
         exit 1
@@ -109,4 +146,4 @@ Write-Host "   Premi Ctrl+C per fermare il server"         -ForegroundColor Dark
 Write-Host "===============================================" -ForegroundColor Cyan
 Write-Host ""
 
-& python (Join-Path $ProjectDir "server.py")
+& $PythonExe (Join-Path $ProjectDir "server.py")
