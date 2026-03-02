@@ -160,15 +160,21 @@ def run_single_test(name, action_func, description, robot, verbose=False):
 def run_all_action_tests(verbose=False, pause=False, ip=None, port=None):
     """
     Esegue tutte le azioni del robot.
-    Se ip è specificato e qi SDK è disponibile, usa NAORobot (robot reale),
-    altrimenti usa SimulatedRobot.
-    Restituisce (passed, failed, results) dove results è una lista di
+    Se SIMULATION_MODE e' False (o ip e' specificato) e qi SDK e' disponibile,
+    usa NAORobot (robot reale), altrimenti usa SimulatedRobot.
+    Restituisce (passed, failed, results) dove results e' una lista di
     (nome, descrizione, successo, errore, durata).
 
-    Può essere chiamata da verify_system.py o direttamente.
+    Puo' essere chiamata da verify_system.py o direttamente.
     """
     if port is None:
         port = config.NAO_PORT
+
+    # Se non e' stato passato un IP esplicito, usa quello del .env
+    # quando SIMULATION_MODE e' disattivato
+    if ip is None and not config.SIMULATION_MODE:
+        ip = config.NAO_IP
+
     if ip and qi_available:
         print("  Connessione a NAO reale: {}:{}...".format(ip, port))
         robot = NAORobot(ip, port)
@@ -232,18 +238,20 @@ def main():
     parser.add_argument(
         "--verbose", "-v",
         action="store_true",
+        default=config.VERBOSE,
         help="Mostra output dettagliato di ogni azione"
     )
     parser.add_argument(
         "--pause", "-p",
         action="store_true",
+        default=config.PAUSE,
         help="Attende pressione di Invio tra un'azione e l'altra"
     )
     parser.add_argument(
         "--ip",
         type=str,
         default=None,
-        help="IP del robot NAO (se omesso usa simulazione)"
+        help="IP del robot NAO (se omesso, usa .env / SIMULATION_MODE)"
     )
     parser.add_argument(
         "--port",
@@ -253,9 +261,10 @@ def main():
     )
     args = parser.parse_args()
 
+    mode_label = 'SIMULAZIONE' if config.SIMULATION_MODE else 'ROBOT ({})'.format(config.NAO_IP)
     print()
     print('='*64)
-    print('  TEST COMPLETO AZIONI ROBOT - MODALITA\' SIMULAZIONE')
+    print('  TEST COMPLETO AZIONI ROBOT - MODALITA\' {}'.format(mode_label))
     print('='*64)
     print('  Totale azioni da testare: {}'.format(len(ALL_ACTIONS)))
     print('{}\n'.format('='*64))

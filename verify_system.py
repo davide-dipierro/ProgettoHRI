@@ -45,24 +45,26 @@ def main():
     parser.add_argument(
         "--verbose", "-v",
         action="store_true",
+        default=config.VERBOSE,
         help="Mostra output dettagliato delle azioni robot"
     )
     parser.add_argument(
         "--pause", "-p",
         action="store_true",
+        default=config.PAUSE,
         help="Attende pressione di Invio tra un'azione e l'altra"
     )
     parser.add_argument(
         "--ip",
         type=str,
         default=None,
-        help="IP del robot NAO (se omesso usa simulazione)"
+        help="IP del robot NAO (se omesso, usa .env / SIMULATION_MODE)"
     )
     parser.add_argument(
         "--port",
         type=int,
-        default=9559,
-        help="Porta del robot NAO (default: 9559)"
+        default=config.NAO_PORT,
+        help="Porta del robot NAO (default: {})".format(config.NAO_PORT)
     )
     args = parser.parse_args()
 
