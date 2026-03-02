@@ -13,6 +13,7 @@ Usage:
     python test_all_actions.py
     python test_all_actions.py --verbose
     python test_all_actions.py --pause        # attende input tra un'azione e l'altra
+    python test_all_actions.py --ip 192.168.1.10 --port 9559 -v -p
 """
 
 from __future__ import print_function
@@ -22,11 +23,20 @@ import time
 import traceback
 import argparse
 
+# Compatibilita' Python 2/3
+try:
+    _input = raw_input
+except NameError:
+    _input = input
+
 # Assicuriamoci di importare dal percorso corretto
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import config
 from robot_controller import (
     SimulatedRobot,
+    NAORobot,
+    qi_available,
     action_intro,
     action_win_claim,
     action_bluff,
@@ -41,11 +51,18 @@ from robot_controller import (
     action_react_user_allin,
     action_react_user_fold,
     action_thinking,
+    action_hand_start_1,
+    action_hand_start_2,
+    action_new_flop,
+    action_new_turn,
+    action_new_river,
     action_robot_check,
     action_robot_call,
     action_robot_call_allin,
     action_robot_raise,
     action_robot_raise_bluff,
+    action_robot_raise_bluff_1,
+    action_robot_raise_bluff_2,
     action_robot_allin,
     action_robot_fold,
 )
@@ -87,12 +104,20 @@ ALL_ACTIONS = [
     ("react_user_allin",   action_react_user_allin,   "Reazione a all-in utente"),
     ("react_user_fold",    action_react_user_fold,    "Reazione a fold utente"),
     ("thinking",           action_thinking,           "Robot sta pensando"),
+    # --- Inizio mano e nuove carte ---
+    ("hand_start_1",       action_hand_start_1,       "Annuncio inizio mano 1"),
+    ("hand_start_2",       action_hand_start_2,       "Annuncio inizio mano 2"),
+    ("new_flop",           action_new_flop,           "Commento sul flop"),
+    ("new_turn",           action_new_turn,           "Commento sul turn"),
+    ("new_river",          action_new_river,          "Commento sul river"),
     # --- Azioni verbali del robot ---
     ("robot_check",        action_robot_check,        "Robot annuncia check"),
     ("robot_call",         action_robot_call,         "Robot annuncia call"),
     ("robot_call_allin",   action_robot_call_allin,   "Robot annuncia call all-in"),
     ("robot_raise",        action_robot_raise,        "Robot annuncia raise"),
     ("robot_raise_bluff",  action_robot_raise_bluff,  "Robot annuncia raise (bluff)"),
+    ("robot_raise_bluff_1",action_robot_raise_bluff_1,"Robot raise bluff fase 1 (sicuro)"),
+    ("robot_raise_bluff_2",action_robot_raise_bluff_2,"Robot raise bluff fase 2 (aggressivo)"),
     ("robot_allin",        action_robot_allin,        "Robot annuncia all-in"),
     ("robot_fold",         action_robot_fold,         "Robot annuncia fold"),
 ]
@@ -132,15 +157,25 @@ def run_single_test(name, action_func, description, robot, verbose=False):
         return False, traceback.format_exc()
 
 
-def run_all_action_tests(verbose=False, pause=False):
+def run_all_action_tests(verbose=False, pause=False, ip=None, port=None):
     """
-    Esegue tutte le azioni del robot in simulazione.
+    Esegue tutte le azioni del robot.
+    Se ip è specificato e qi SDK è disponibile, usa NAORobot (robot reale),
+    altrimenti usa SimulatedRobot.
     Restituisce (passed, failed, results) dove results è una lista di
     (nome, descrizione, successo, errore, durata).
 
     Può essere chiamata da verify_system.py o direttamente.
     """
-    robot = SimulatedRobot()
+    if port is None:
+        port = config.NAO_PORT
+    if ip and qi_available:
+        print("  Connessione a NAO reale: {}:{}...".format(ip, port))
+        robot = NAORobot(ip, port)
+    else:
+        if ip and not qi_available:
+            print_warn("qi SDK non disponibile, uso simulazione")
+        robot = SimulatedRobot()
     results = []
 
     for i, (name, func, desc) in enumerate(ALL_ACTIONS, 1):
@@ -148,7 +183,7 @@ def run_all_action_tests(verbose=False, pause=False):
         print("  {}{}{}  -  {}".format(CYAN, header, RESET, desc))
 
         if pause:
-            input("    {}Premi Invio per eseguire...{}".format(YELLOW, RESET))
+            _input("    {}Premi Invio per eseguire...{}".format(YELLOW, RESET))
 
         start = time.time()
         ok, err = run_single_test(name, func, desc, robot, verbose=verbose)
@@ -204,6 +239,18 @@ def main():
         action="store_true",
         help="Attende pressione di Invio tra un'azione e l'altra"
     )
+    parser.add_argument(
+        "--ip",
+        type=str,
+        default=None,
+        help="IP del robot NAO (se omesso usa simulazione)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=config.NAO_PORT,
+        help="Porta del robot NAO (default: {})".format(config.NAO_PORT)
+    )
     args = parser.parse_args()
 
     print()
@@ -214,7 +261,8 @@ def main():
     print('{}\n'.format('='*64))
 
     passed, failed, results = run_all_action_tests(
-        verbose=args.verbose, pause=args.pause
+        verbose=args.verbose, pause=args.pause,
+        ip=args.ip, port=args.port
     )
     total_time = sum(r[4] for r in results)
 

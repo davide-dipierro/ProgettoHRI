@@ -2,28 +2,16 @@
 # HRI Poker Experiment - Script di avvio (Windows PowerShell)
 # =============================================================================
 #
+# La configurazione e' nel file .env (modifica quello per cambiare impostazioni)
+#
 # UTILIZZO:
-#   .\start.ps1                                                 -> Modalita' SIMULAZIONE (default)
-#   .\start.ps1 -Mode simulate                                  -> Modalita' SIMULAZIONE
-#   .\start.ps1 -Mode robot                                     -> Modalita' ROBOT (Choregraphe)
-#   .\start.ps1 -Mode robot -NaoIp 192.168.1.100                -> Robot fisico su IP specifico
-#   .\start.ps1 -Mode robot -NaoPort 50683                      -> Robot su porta specifica
-#   .\start.ps1 -Mode robot -NaoIp 192.168.1.100 -NaoPort 50683 -> IP e porta specifici
+#   .\start.ps1                -> Avvia il server (configurazione da .env)
+#   .\start.ps1 -Verify        -> Esegue verify_system.py prima di avviare
 #
 # =============================================================================
 
 param(
-    [ValidateSet("simulate", "robot")]
-    [string]$Mode = "simulate",
-
-    [string]$NaoIp = "127.0.0.1",
-    [int]$NaoPort = 50683,
-
-    # Path di Python 2.7 (necessario per il controller robot con qi SDK)
-    [string]$Python27 = "C:\Python27\python.exe",
-
-    # Path dell'SDK Choregraphe
-    [string]$SdkPath = "C:\Program Files (x86)\Aldebaran Robotics\Choregraphe Suite 2.1\lib"
+    [switch]$Verify
 )
 
 Write-Host ""
@@ -36,72 +24,75 @@ Write-Host ""
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $ProjectDir
 
-# --- Modalita' ---
-if ($Mode -eq "simulate") {
-    $env:SIMULATION_MODE = "true"
-    Write-Host "  Modalita':  SIMULAZIONE (senza robot)" -ForegroundColor Yellow
-} else {
-    $env:SIMULATION_MODE = "false"
-    Write-Host "  Modalita':  ROBOT (collegamento Choregraphe/NAO)" -ForegroundColor Green
-}
-
-$env:NAO_IP = $NaoIp
-$env:NAO_PORT = $NaoPort.ToString()
-$env:PYTHON_PATH = $Python27
-$env:NAOQI_SDK_PATH = $SdkPath
-
-Write-Host "  NAO IP:     ${NaoIp}:${NaoPort}"
-Write-Host "  Python 2.7: $Python27"
-Write-Host "  SDK Path:   $SdkPath"
-Write-Host "  Directory:  $ProjectDir"
-Write-Host ""
-
-# --- Virtual environment ---
-$VenvPython = Join-Path $ProjectDir ".venv\Scripts\python.exe"
-$VenvActivate = Join-Path $ProjectDir ".venv\Scripts\Activate.ps1"
-
-if (Test-Path $VenvPython) {
-    & $VenvActivate
-    Write-Host "[OK] Virtual environment attivato" -ForegroundColor Green
-} else {
-    Write-Host "[!] Virtual environment non trovato in .venv\" -ForegroundColor Yellow
-    Write-Host "    Creo il venv e installo le dipendenze..."
-    python -m venv "$ProjectDir\.venv"
-    & $VenvActivate
-}
-
-# --- Verifica Python 2.7 (solo in modalita' robot) ---
-if ($Mode -eq "robot") {
-    if (Test-Path $Python27) {
-        Write-Host "[OK] Python 2.7 trovato: $Python27" -ForegroundColor Green
-        # Verifica modulo qi
-        $qiCheck = & $Python27 -c "import sys; sys.path.insert(0, r'$SdkPath'); import qi; print('OK')" 2>&1
-        if ($qiCheck -match "OK") {
-            Write-Host "[OK] Modulo qi (NAOqi SDK) disponibile" -ForegroundColor Green
+# --- Installazione dipendenze ---
+# Workaround: pip di Python 2.7 non gestisce caratteri Unicode nel path
+# Copiamo requirements.txt in %TEMP% per evitare il problema
+$RequirementsPath = Join-Path $ProjectDir "requirements.txt"
+if (Test-Path $RequirementsPath) {
+    Write-Host "[*] Installazione dipendenze..." -ForegroundColor Yellow
+    $TempReq = Join-Path $env:TEMP "hri_requirements.txt"
+    Copy-Item $RequirementsPath $TempReq -Force
+    & python -m pip install -r $TempReq --quiet 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[!] Installazione dipendenze fallita, verifico se sono gia' presenti..." -ForegroundColor Yellow
+        $flaskOk = & python -c "import flask" 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] Dipendenze gia' installate" -ForegroundColor Green
         } else {
-            Write-Host "[!] ATTENZIONE: modulo qi non trovato in $SdkPath" -ForegroundColor Red
-            Write-Host "    Assicurati che Choregraphe sia installato e il path sia corretto." -ForegroundColor Red
-            Write-Host "    Il server partira' ma i comandi robot falliranno." -ForegroundColor Yellow
+            Write-Host "[!] ERRORE: Flask non trovato. Installa manualmente: pip install Flask" -ForegroundColor Red
+            exit 1
         }
     } else {
-        Write-Host "[!] ATTENZIONE: Python 2.7 non trovato in $Python27" -ForegroundColor Red
-        Write-Host "    Il server partira' ma i comandi robot falliranno." -ForegroundColor Yellow
+        Write-Host "[OK] Dipendenze installate" -ForegroundColor Green
     }
-}
-
-# --- Verifica Flask ---
-$flaskCheck = & $VenvPython -c "import flask; print(flask.__version__)" 2>&1
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[!] Flask non trovato. Installazione in corso..." -ForegroundColor Yellow
-    & $VenvPython -m pip install flask
-} else {
-    Write-Host "[OK] Flask $flaskCheck" -ForegroundColor Green
+    Remove-Item $TempReq -ErrorAction SilentlyContinue -Force
 }
 
 # --- Crea cartella dati ---
 $DataDir = Join-Path $ProjectDir "data"
 if (-not (Test-Path $DataDir)) {
     New-Item -ItemType Directory -Path $DataDir | Out-Null
+}
+
+# --- Verifica .env ---
+$envFile = Join-Path $ProjectDir ".env"
+$envExample = Join-Path $ProjectDir ".env.example"
+if (-not (Test-Path $envFile)) {
+    if (Test-Path $envExample) {
+        Write-Host "[*] File .env non trovato, copio da .env.example..." -ForegroundColor Yellow
+        Copy-Item $envExample $envFile
+        Write-Host "[OK] File .env creato (modifica i valori secondo il tuo setup)" -ForegroundColor Green
+    } else {
+        Write-Host "[!] File .env e .env.example non trovati" -ForegroundColor Red
+        Write-Host "    Verra' usata la configurazione di default." -ForegroundColor Yellow
+    }
+}
+
+# --- Verifica (opzionale) ---
+if ($Verify) {
+    Write-Host ""
+    Write-Host "[*] Verifica del sistema..." -ForegroundColor Yellow
+    & python (Join-Path $ProjectDir "verify_system.py")
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[!] Verifica fallita" -ForegroundColor Red
+        exit 1
+    }
+}
+
+# --- Leggi modalita' dal .env ---
+if (Test-Path $envFile) {
+    $simMode = "SIMULAZIONE"
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match "^SIMULATION_MODE=(.+)$") {
+            if ($Matches[1].Trim().ToLower() -eq "false") {
+                $simMode = "ROBOT"
+            }
+        }
+    }
+    Write-Host "  Modalita':  $simMode" -ForegroundColor Yellow
+    Write-Host "  Config:     .env" -ForegroundColor DarkGray
+} else {
+    Write-Host "  Modalita':  SIMULAZIONE (default)" -ForegroundColor Yellow
 }
 
 # --- Avvio ---
@@ -114,13 +105,8 @@ Write-Host "     Player:  http://localhost:5000/player"     -ForegroundColor Whi
 Write-Host "     Robot:   http://localhost:5000/robot"      -ForegroundColor White
 Write-Host "     Admin:   http://localhost:5000/admin"      -ForegroundColor White
 Write-Host ""
-if ($Mode -eq "robot") {
-    Write-Host "   Assicurati che Choregraphe sia aperto"   -ForegroundColor Yellow
-    Write-Host "   con un robot virtuale su ${NaoIp}:${NaoPort}" -ForegroundColor Yellow
-    Write-Host ""
-}
 Write-Host "   Premi Ctrl+C per fermare il server"         -ForegroundColor DarkGray
 Write-Host "===============================================" -ForegroundColor Cyan
 Write-Host ""
 
-& $VenvPython (Join-Path $ProjectDir "server.py")
+& python (Join-Path $ProjectDir "server.py")

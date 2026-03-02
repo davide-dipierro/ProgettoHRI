@@ -29,9 +29,9 @@ import os
 import time
 import argparse
 
-# Configura il path dell'SDK Choregraphe
+# Configurazione centralizzata (carica .env e configura SDK)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sdk_config
+import config
 
 # Flag per modalita' simulazione
 SIMULATE_MODE = False
@@ -770,8 +770,8 @@ def main():
     parser.add_argument(
         "--port",
         type=int,
-        default=9559,
-        help="Porta del robot NAO (default: 9559)"
+        default=config.NAO_PORT,
+        help="Porta del robot NAO (default: {})".format(config.NAO_PORT)
     )
     parser.add_argument(
         "--action",

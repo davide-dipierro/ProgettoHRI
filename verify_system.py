@@ -14,6 +14,7 @@ Esegue tutti i controlli necessari prima di un esperimento:
 Usage:
     python verify_system.py
     python verify_system.py --verbose     # output dettagliato delle azioni robot
+    python verify_system.py --ip 192.168.1.10 --port 9559 -v -p
 """
 
 from __future__ import print_function
@@ -22,12 +23,9 @@ import sys
 import subprocess
 import argparse
 
-# Configura il path dell'SDK Choregraphe
+# Configurazione centralizzata
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import sdk_config
-
-# Assicuriamoci di importare dal percorso corretto
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config
 
 from test_all_actions import (
     run_all_action_tests,
@@ -54,6 +52,18 @@ def main():
         action="store_true",
         help="Attende pressione di Invio tra un'azione e l'altra"
     )
+    parser.add_argument(
+        "--ip",
+        type=str,
+        default=None,
+        help="IP del robot NAO (se omesso usa simulazione)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=9559,
+        help="Porta del robot NAO (default: 9559)"
+    )
     args = parser.parse_args()
 
     print('\n{}'.format('='*64))
@@ -70,6 +80,9 @@ def main():
     
     required_files = [
         "server.py",
+        "config.py",
+        "game_state.py",
+        "data_logger.py",
         "robot_controller.py",
         "test_all_actions.py",
         "templates/player.html",
@@ -125,22 +138,32 @@ def main():
         print_fail('Verifica sintassi fallita: {}'.format(e))
     
     # =========================================================================
-    # [4] Verifica cartella dati
+    # [4] Verifica cartella dati e file .env
     # =========================================================================
-    print('\n  {}[4] Verifica cartella dati{}'.format(BOLD, RESET))
+    print('\n  {}[4] Verifica cartella dati e configurazione{}'.format(BOLD, RESET))
     data_dir = os.path.join(base_dir, "data")
     if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-        print_ok("Cartella 'data/' creata")
+        print_fail("Cartella 'data/' NON trovata")
+        errors.append("Cartella 'data/' mancante. Creala manualmente.")
     else:
         print_ok("Cartella 'data/' esiste")
+
+    env_file = os.path.join(base_dir, ".env")
+    if os.path.exists(env_file):
+        print_ok("File .env trovato")
+    else:
+        print_warn("File .env non trovato (verra' usata configurazione di default)")
+        print_warn("Copia .env.example come .env: copy .env.example .env")
     
     # =========================================================================
     # [5] Test completo azioni robot (tutte e 19)
     # =========================================================================
     print('\n  {}[5] Test completo azioni robot (simulazione){}'.format(BOLD, RESET))
     
-    passed, failed, results = run_all_action_tests(verbose=args.verbose, pause=args.pause)
+    passed, failed, results = run_all_action_tests(
+        verbose=args.verbose, pause=args.pause,
+        ip=args.ip, port=args.port
+    )
     total_time = sum(r[4] for r in results)
     
     if failed > 0:
