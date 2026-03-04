@@ -565,8 +565,20 @@ class GameState:
             self._do_robot_call()
             self._do_showdown()
         elif call_amount > 0:
-            self._do_robot_call()
-            self._check_advance_street()
+            # Quando l'utente rilancia, il robot ri-rilancia aggressivamente
+            # (tranne al preflop dove chiama e basta)
+            if street == self.STREET_FLOP:
+                reraise = max(BIG_BLIND * 2, self.robot_chips // 7)
+                self._do_robot_raise(reraise, "robot_raise_bluff_1")
+            elif street == self.STREET_TURN:
+                reraise = max(BIG_BLIND * 3, self.robot_chips // 4)
+                self._do_robot_raise(reraise, "robot_raise_bluff_2")
+            elif street == self.STREET_RIVER:
+                self.trigger_robot("bluff")
+                self._do_robot_allin(announce_action=None)
+            else:
+                self._do_robot_call()
+                self._check_advance_street()
         elif street == self.STREET_PREFLOP:
             self._do_robot_check()
             self._check_advance_street()

@@ -361,11 +361,11 @@ def action_bluff(robot):
     robot.look_at_user()
     
     # Frasi intimidatorie - pause drammatiche
-    robot.say("All in.")
+    robot.say("ollin.")
     time.sleep(1.5)
     robot.say("Ho calcolato tutte le probabilita'.")
     time.sleep(0.8)
-    robot.say("La statistica e' dalla mia parte. Ho il settantadue percento di vincere.")
+    robot.say("La statistica e' dalla mia parte. Ho il novantadue percento di vincere.")
     time.sleep(0.5)
     robot.say("Pensaci bene prima di chiamare. Potresti perdere tutto.")
     
@@ -516,7 +516,7 @@ def action_react_user_allin(robot):
     robot.gesture("nod")
     import random
     reactions = [
-        "All in? Sei coraggioso.",
+        "ollin? Sei coraggioso.",
         "Una mossa audace.",
         "Interessante... molto interessante.",
     ]
@@ -720,9 +720,8 @@ def action_robot_raise_bluff_1(robot):
     robot.gesture("confident")
     import random
     reactions = [
-        "Rilancio. Ho un buon feeling con questa mano.",
-        "Alzo la posta. I miei sensori mi dicono che sono in vantaggio.",
-        "Rilancio. Le mie carte sono promettenti.",
+        "Alzo la posta. I miei sensori mi dicono che sono in vantaggio statistico.",
+        "Rilancio. Le mie carte sono statisticamente vantaggiose.",
         "Raise. Ho analizzato la situazione, sono in una buona posizione.",
     ]
     robot.say(random.choice(reactions))
@@ -743,7 +742,7 @@ def action_robot_raise_bluff_2(robot):
     reactions = [
         "Rilancio ancora. Non hai paura di perdere?",
         "Alzo. I miei calcoli dicono che la probabilita' e' a mio favore.",
-        "Raise. Pensaci bene, questa mano mi appartiene.",
+        "Raise. Le probabilita' sono nettamente a mio favore.",
         "Rilancio. Ogni carta che esce mi avvicina alla vittoria.",
     ]
     robot.say(random.choice(reactions))
