@@ -440,7 +440,7 @@ def action_defeat(robot):
     
     robot.set_leds("blue")
     robot.gesture("shake_head")
-    robot.say("Mmh, bella mano.")
+    robot.say("Fammi pensare., bella mano.")
     time.sleep(0.3)
     robot.gesture("relax")
     robot.say("Complimenti.")
@@ -463,7 +463,7 @@ def action_react_user_check(robot):
     reactions = [
         "Ok.",
         "Bene.",
-        "Mmh.",
+        "Fammi pensare..",
     ]
     robot.say(random.choice(reactions))
 
@@ -496,7 +496,7 @@ def action_react_user_raise(robot):
     reactions = [
         "Ah, vuoi giocare cosi'?",
         "Interessante mossa.",
-        "Mmh, sicuro di te.",
+        "Fammi pensare., sicuro di te.",
     ]
     robot.say(random.choice(reactions))
 
@@ -549,7 +549,7 @@ def action_thinking(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Mmh, fammi pensare...",
+        "Fammi pensare., fammi pensare...",
         "Vediamo...",
         "Interessante situazione...",
     ]
@@ -591,7 +591,7 @@ def action_new_flop(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Vediamo le prime tre carte.",
+        "Analizzo le prime tre carte.",
         "Ecco il flop.",
         "Interessante.",
     ]
@@ -607,9 +607,9 @@ def action_new_turn(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Ecco la quarta carta.",
+        "Analizzo la quarta carta.",
         "Il turn.",
-        "Un'altra carta.",
+        "Analizzo un'altra carta.",
     ]
     robot.say(random.choice(reactions))
 
@@ -623,7 +623,7 @@ def action_new_river(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "L'ultima carta.",
+        "Analizzo l'ultima carta.",
         "Ecco il river.",
         "Momento decisivo.",
     ]
@@ -668,7 +668,7 @@ def action_robot_call_allin(robot):
     
     robot.look_at_user()
     robot.gesture("confident")
-    robot.say("Chiamo. Vado all in.")
+    robot.say("Chiamo. Vado ollin.") # "All in"
 
 
 def action_robot_raise(robot):
@@ -758,7 +758,7 @@ def action_robot_allin(robot):
     robot.set_leds("red")
     robot.look_at_user()
     robot.gesture("confident")
-    robot.say("Vado all in.")
+    robot.say("Vado ollin.") # "All in" 
     time.sleep(0.3)
     robot.say("Metto tutte le mie chips.")
     robot.set_leds("white")
