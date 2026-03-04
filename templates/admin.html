@@ -390,8 +390,8 @@
                     <span class="value highlight" id="data-decision">-</span>
                 </div>
                 <div class="data-row">
-                    <span class="label">Tempo Reazione</span>
-                    <span class="value highlight" id="data-reaction">-</span>
+                    <span class="label">Azioni Utente</span>
+                    <span class="value highlight" id="data-actions">-</span>
                 </div>
             </div>
             
@@ -488,7 +488,9 @@
             document.getElementById('data-session').textContent = s.session_id || '-';
             document.getElementById('data-participant').textContent = s.participant_id || '-';
             document.getElementById('data-decision').textContent = s.user_decision_on_bluff || '-';
-            document.getElementById('data-reaction').textContent = s.reaction_time_ms ? `${s.reaction_time_ms.toFixed(0)} ms` : '-';
+            const ua = s.user_actions || {};
+            const currentActions = ua[s.current_hand] || [];
+            document.getElementById('data-actions').textContent = currentActions.length > 0 ? `Mano ${s.current_hand}: ${currentActions.join(' → ')}` : '-';
             
             // Log changes
             if (lastState) {

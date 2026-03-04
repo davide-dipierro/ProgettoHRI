@@ -300,13 +300,15 @@ class NAORobot:
         self.posture.goToPosture("StandInit", 0.8)
     
     def cleanup(self):
-        """Ripristina stato neutro mantenendo il robot in piedi."""
+        """Ripristina stato neutro mantenendo il robot in piedi.
+        
+        Usa _reset_upper_body() invece di goToPosture('StandInit') per
+        evitare il piegamento delle ginocchia tra un'animazione e l'altra.
+        """
         print("[NAO] Cleanup in corso...")
         self.set_leds("white")
-        self.posture.goToPosture("StandInit", 0.5)
-        # NON chiamiamo motion.rest() per evitare che il robot si sieda
-        # tra un'animazione e l'altra durante la simulazione con Choregraphe.
-        print("[NAO] Pronto (StandInit).")
+        self._reset_upper_body(1.0)
+        print("[NAO] Pronto (upper body reset).")
 
 
 # =============================================================================

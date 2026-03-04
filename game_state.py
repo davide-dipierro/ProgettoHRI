@@ -88,9 +88,8 @@ class GameState:
         self.show_robot_cards = False
 
         # Dati esperimento
-        self.bluff_start_time = None
-        self.reaction_time_ms = None
         self.user_decision_on_bluff = None
+        self.user_actions = {1: [], 2: [], 3: []}
 
         # Robot thinking
         self.robot_thinking = False
@@ -145,6 +144,8 @@ class GameState:
         self.last_action = None
         self.last_action_by = None
         self._last_street_announced = None
+
+        self.user_actions[hand_number] = []
 
         self._post_blinds()
 
@@ -263,9 +264,8 @@ class GameState:
             "last_action": self.last_action,
             "last_action_by": self.last_action_by,
             "robot_thinking": self.robot_thinking,
-            "bluff_start_time": self.bluff_start_time,
-            "reaction_time_ms": self.reaction_time_ms,
-            "user_decision_on_bluff": self.user_decision_on_bluff
+            "user_decision_on_bluff": self.user_decision_on_bluff,
+            "user_actions": self.user_actions
         }
 
     # =========================================================================
@@ -301,9 +301,8 @@ class GameState:
         self.last_action = "fold"
         self.last_action_by = "user"
 
+        self.user_actions[self.current_hand].append("fold")
         if self.current_hand == 2:
-            if self.bluff_start_time:
-                self.reaction_time_ms = time.time() * 1000 - self.bluff_start_time
             self.user_decision_on_bluff = "fold"
             self._log_bluff_result()
             self.trigger_robot("bluff_success")
@@ -318,6 +317,9 @@ class GameState:
 
         self.last_action = "check"
         self.last_action_by = "user"
+
+        self.user_actions[self.current_hand].append("check")
+
         self.turn = "robot"
 
         self.trigger_robot("react_user_check")
@@ -337,10 +339,9 @@ class GameState:
         self.last_action = "call {}".format(actual_call)
         self.last_action_by = "user"
 
+        self.user_actions[self.current_hand].append("call")
         # Tracciamento decisione bluff (mano 2)
         if self.current_hand == 2:
-            if self.bluff_start_time:
-                self.reaction_time_ms = time.time() * 1000 - self.bluff_start_time
             self.user_decision_on_bluff = "call"
 
         # Reazione del robot (skip preflop e momenti di showdown)
@@ -385,6 +386,9 @@ class GameState:
 
         self.last_action = "raise {}".format(actual_raise)
         self.last_action_by = "user"
+
+        self.user_actions[self.current_hand].append("raise {}".format(actual_raise))
+
         self.turn = "robot"
 
         self.trigger_robot("react_user_raise")
@@ -404,10 +408,9 @@ class GameState:
         self.last_action = "ALL-IN {}".format(allin_amount)
         self.last_action_by = "user"
 
+        self.user_actions[self.current_hand].append("allin")
         # Tracciamento bluff
         if self.current_hand == 2:
-            if self.bluff_start_time:
-                self.reaction_time_ms = time.time() * 1000 - self.bluff_start_time
             self.user_decision_on_bluff = "allin"
 
         self.trigger_robot("react_user_allin")
@@ -576,7 +579,6 @@ class GameState:
         elif street == self.STREET_RIVER:
             self.trigger_robot("bluff")
             self._do_robot_allin(announce_action=None)
-            self.bluff_start_time = time.time() * 1000
         else:
             self._do_robot_check()
             self._check_advance_street()
@@ -758,7 +760,7 @@ class GameState:
             self.session_id,
             self.participant_id,
             self.user_decision_on_bluff,
-            self.reaction_time_ms,
+            self.user_actions,
             self.user_chips,
             self.robot_chips
         )
