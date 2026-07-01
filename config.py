@@ -73,8 +73,8 @@ NAOQI_SDK_PATH = os.environ.get("NAOQI_SDK_PATH", "")
 CHOREGRAPHE_LIB = os.environ.get("CHOREGRAPHE_LIB", "")
 
 _CHOREGRAPHE_PATHS = [
-    r"C:\Program Files (x86)\Aldebaran Robotics\Choregraphe Suite 2.1\lib",
-    r"C:\Program Files\Aldebaran Robotics\Choregraphe Suite 2.1\lib",
+    r"C:\Program Files (x86)\Aldebaran Robotics\Choregraphe Suite 2.8\lib",
+    r"C:\Program Files\Aldebaran Robotics\Choregraphe Suite 2.8\lib",
     NAOQI_SDK_PATH,
     CHOREGRAPHE_LIB,
 ]
