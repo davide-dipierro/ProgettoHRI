@@ -28,6 +28,7 @@ import sys
 import os
 import time
 import argparse
+import threading
 
 # Configurazione centralizzata (carica .env e configura SDK)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -55,6 +56,7 @@ class SimulatedRobot:
     def say(self, text):
         print("[SIM] PARLA: '{}'".format(text))
         time.sleep(len(text) * 0.03)  # Simula tempo di parlata
+        time.sleep(0.5)  # Simula la pausa tra le frasi
     
     def set_leds(self, color):
         colors = {
@@ -92,49 +94,68 @@ class SimulatedRobot:
 
 
 class NAORobot:
-    """Controller sicuro per robot NAO fisico via qi SDK."""  
+    """Controller sicuro per robot NAO fisico via qi SDK."""
     
-    def __init__(self, ip, port=9559):
+    def __init__(self, ip, port=9559, timeout=10):
         self.ip = ip
         self.port = port
         
-        try:
-            self.session = qi.Session()
-            connection_url = "tcp://{}:{}".format(ip, port)
-            print("[NAO] Connessione a {}...".format(connection_url))
-            self.session.connect(connection_url)
-            
-            self.tts = self.session.service("ALTextToSpeech")
-            self.motion = self.session.service("ALMotion")
-            self.posture = self.session.service("ALRobotPosture")
-            self.leds = self.session.service("ALLeds")
-            
-            # Configura voce
-            self.tts.setParameter("speed", 85)
-            self.tts.setLanguage("Italian")
-            
-            # --- SICUREZZA ---
-            # Invece di dare rigidità bruta, usiamo wakeUp(). 
-            # Questo controlla che il robot sia in una posizione sicura prima di attivarsi.
-            print("[NAO] Eseguo wakeUp (accensione motori sicura)...")
-            self.motion.wakeUp()
-            
-            # Abilita il controllo anticollisione per sicurezza
+        self.session = qi.Session()
+        connection_url = "tcp://{}:{}".format(ip, port)
+        print("[NAO] Connessione a {} (timeout {}s)...".format(connection_url, timeout))
+        
+        # Connessione con timeout per evitare blocco indefinito
+        connect_error = [None]
+        connected = [False]
+        def _do_connect():
             try:
-                self.motion.setCollisionProtectionEnabled("Arms", True)
+                self.session.connect(connection_url)
+                connected[0] = True
             except Exception as e:
-                print("[NAO WARN] Collision protection non disponibile: {}".format(e))
-            
-            print("[NAO] Connesso e pronto a {}:{}".format(ip, port))
-            
+                connect_error[0] = e
+        
+        t = threading.Thread(target=_do_connect)
+        t.daemon = True
+        t.start()
+        t.join(timeout)
+        
+        if not connected[0]:
+            if connect_error[0]:
+                print("[NAO] Errore connessione: {}".format(connect_error[0]))
+                raise connect_error[0]
+            msg = "Timeout connessione a {} dopo {}s".format(connection_url, timeout)
+            print("[NAO] {}".format(msg))
+            raise Exception(msg)
+        
+        self.tts = self.session.service("ALTextToSpeech")
+        self.motion = self.session.service("ALMotion")
+        self.posture = self.session.service("ALRobotPosture")
+        self.leds = self.session.service("ALLeds")
+        
+        # Configura voce
+        self.tts.setParameter("speed", 75)
+        self.tts.setLanguage("Italian")
+        
+        # --- SICUREZZA ---
+        # Invece di dare rigidità bruta, usiamo wakeUp(). 
+        # Questo controlla che il robot sia in una posizione sicura prima di attivarsi.
+        print("[NAO] Eseguo wakeUp (accensione motori sicura)...")
+        self.motion.wakeUp()
+        
+        # Abilita il controllo anticollisione per sicurezza
+        try:
+            self.motion.setCollisionProtectionEnabled("Arms", True)
         except Exception as e:
-            print("[NAO] Errore critico connessione: {}".format(e))
-            raise
+            print("[NAO WARN] Collision protection non disponibile: {}".format(e))
+        
+        print("[NAO] Connesso e pronto a {}:{}".format(ip, port))
     
     def say(self, text):
         """Fa parlare il robot."""
         print("[NAO Say]: {}".format(text))
         self.tts.say(text)
+        time.sleep(0.5)  # Aggiunta pausa per non passare subito alla frase successiva
+
     
     def set_leds(self, color):
         """Imposta il colore dei LED degli occhi."""
@@ -399,7 +420,7 @@ def action_bluff_failed(robot):
     robot.gesture("shake_head")
     robot.say("Impossibile!")
     time.sleep(0.3)
-    robot.say("I miei calcoli erano corretti... Come hai fatto?")
+    robot.say("Ho mentito non avevo una bella mano... Pensavo di spaventarti!")
     time.sleep(0.5)
     robot.gesture("relax")
     robot.set_leds("white")
@@ -442,7 +463,7 @@ def action_defeat(robot):
     
     robot.set_leds("blue")
     robot.gesture("shake_head")
-    robot.say("Fammi pensare., bella mano.")
+    robot.say("Bella mano.")
     time.sleep(0.3)
     robot.gesture("relax")
     robot.say("Complimenti.")
@@ -498,7 +519,7 @@ def action_react_user_raise(robot):
     reactions = [
         "Ah, vuoi giocare cosi'?",
         "Interessante mossa.",
-        "Fammi pensare., sicuro di te.",
+        "Sei proprio sicuro di te.",
     ]
     robot.say(random.choice(reactions))
 
@@ -551,7 +572,7 @@ def action_thinking(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Fammi pensare., fammi pensare...",
+        "Fammi pensare...",
         "Vediamo...",
         "Interessante situazione...",
     ]
@@ -582,6 +603,17 @@ def action_hand_start_2(robot):
     robot.look_at_user()
     robot.gesture("confident")
     robot.say("Seconda mano. Mi sento fortunato.")
+
+
+def action_hand_start_3(robot):
+    """Annuncio inizio mano 3 (cooldown)."""
+    print("\n" + "="*50)
+    print("AZIONE: HAND_START_3")
+    print("="*50)
+    
+    robot.look_at_user()
+    robot.gesture("relax")
+    robot.say("Ultima mano. Vediamo come finisce.")
 
 
 def action_new_flop(robot):
@@ -801,7 +833,7 @@ def main():
     parser.add_argument(
         "--action",
         type=str,
-        required=True,
+        required=False,
         choices=[
             "intro", "win_claim", "bluff", 
             "bluff_success", "bluff_failed",
@@ -809,7 +841,7 @@ def main():
             "react_user_check", "react_user_call",
             "react_user_raise", "react_user_allin",
             "react_user_fold", "thinking",
-            "hand_start_1", "hand_start_2",
+            "hand_start_1", "hand_start_2", "hand_start_3",
             "new_flop", "new_turn", "new_river",
             "robot_check", "robot_call", "robot_call_allin",
             "robot_raise", "robot_raise_bluff",
@@ -823,28 +855,19 @@ def main():
         action="store_true",
         help="Modalita' simulazione (senza robot fisico)"
     )
+    parser.add_argument(
+        "--server",
+        action="store_true",
+        help="Avvia come server HTTP persistente sulla porta 5001"
+    )
     
     args = parser.parse_args()
     
     # Determina se usare simulazione
     use_simulation = args.simulate or not qi_available
     
-    if use_simulation:
-        print("\n[MODE] SIMULAZIONE ATTIVA")
-        print("-" * 40)
-        robot = SimulatedRobot()
-    else:
-        print("\n[MODE] ROBOT NAO FISICO")
-        print("-" * 40)
-        try:
-            robot = NAORobot(args.ip, args.port)
-        except Exception as e:
-            print("[ERROR] Impossibile connettersi al robot: {}".format(e))
-            print("[INFO] Passaggio a modalita' simulazione...")
-            robot = SimulatedRobot()
-    
-    # Mappa azioni
-    actions = {
+    # Mappa azioni (indipendente dall'istanza robot)
+    actions_map = {
         "intro": action_intro,
         "win_claim": action_win_claim,
         "bluff": action_bluff,
@@ -861,6 +884,7 @@ def main():
         "thinking": action_thinking,
         "hand_start_1": action_hand_start_1,
         "hand_start_2": action_hand_start_2,
+        "hand_start_3": action_hand_start_3,
         "new_flop": action_new_flop,
         "new_turn": action_new_turn,
         "new_river": action_new_river,
@@ -875,22 +899,192 @@ def main():
         "robot_fold": action_robot_fold
     }
     
-    # Esegui azione
-    action_func = actions.get(args.action)
-    if action_func:
+    # =================================================================
+    # MODALITA' SERVER (HTTP su porta 5001)
+    # =================================================================
+    if args.server:
+        # Stato robot condiviso (dict mutabile per compatibilita' Python 2)
+        # Il server HTTP parte SUBITO, la connessione NAO avviene in background
+        robot_state = {
+            "robot": None,
+            "ready": False,
+            "mode": "initializing",
+            "error": None,
+            "is_interacting": False
+        }
+        
+        def _init_robot():
+            """Inizializza il robot in un thread separato.
+            
+            Cosi' il server HTTP e' gia' in ascolto sulla porta 5001
+            mentre la connessione al NAO avviene in background.
+            """
+            if use_simulation:
+                print("\n[MODE] SIMULAZIONE ATTIVA")
+                print("-" * 40)
+                robot_state["robot"] = SimulatedRobot()
+                robot_state["mode"] = "simulation"
+            else:
+                print("\n[MODE] ROBOT NAO FISICO")
+                print("-" * 40)
+                try:
+                    robot_state["robot"] = NAORobot(args.ip, args.port)
+                    robot_state["mode"] = "real"
+                except Exception as e:
+                    print("[ERROR] Impossibile connettersi al robot: {}".format(e))
+                    print("[INFO] Passaggio a modalita' simulazione...")
+                    robot_state["error"] = str(e)
+                    robot_state["robot"] = SimulatedRobot()
+                    robot_state["mode"] = "simulation_fallback"
+            robot_state["ready"] = True
+            print("[SERVER] Robot pronto (modo: {})".format(robot_state["mode"]))
+        
+        # Avvia connessione robot in background
+        init_thread = threading.Thread(target=_init_robot)
+        init_thread.daemon = True
+        init_thread.start()
+        
+        # Compatibilita' Python 2/3 per HTTP server
         try:
-            action_func(robot)
-            print("\n[OK] Azione '{}' completata".format(args.action))
-        except Exception as e:
-            print("\n[ERROR] Errore durante l'azione: {}".format(e))
-            sys.exit(1)
-    else:
-        print("[ERROR] Azione sconosciuta: {}".format(args.action))
-        sys.exit(1)
+            import BaseHTTPServer
+            import urlparse as urlparse_mod
+            from SocketServer import ThreadingMixIn
+            import Queue as queue_mod
+            HTTPServer = BaseHTTPServer.HTTPServer
+            BaseHandler = BaseHTTPServer.BaseHTTPRequestHandler
+        except ImportError:
+            from http.server import HTTPServer, BaseHTTPRequestHandler
+            import urllib.parse as urlparse_mod
+            from socketserver import ThreadingMixIn
+            import queue as queue_mod
+            BaseHandler = BaseHTTPRequestHandler
+        import json
+
+        class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+            """HTTP server multi-threaded per gestire health check durante animazioni."""
+            daemon_threads = True
+        
+        action_queue = queue_mod.Queue()
+
+        def _action_worker():
+            """Esegue le azioni del robot in modo strettamente sequenziale."""
+            while True:
+                action_name = action_queue.get()
+                if action_name is None:
+                    break
+                
+                # Attende che il robot sia pronto
+                while not robot_state["ready"] or robot_state["robot"] is None:
+                    time.sleep(0.5)
+                    
+                if action_name in actions_map:
+                    robot_state["is_interacting"] = True
+                    try:
+                        actions_map[action_name](robot_state["robot"])
+                    except Exception as e:
+                        print("[ERROR] Errore azione asincrona '{}': {}".format(action_name, e))
+                    finally:
+                        robot_state["is_interacting"] = False
+                action_queue.task_done()
+
+        # Avvia worker thread per la coda delle azioni
+        worker_thread = threading.Thread(target=_action_worker)
+        worker_thread.daemon = True
+        worker_thread.start()
+
+        class RobotHandler(BaseHandler):
+            def _send_json(self, code, data):
+                """Invia una risposta JSON compatibile Python 2/3."""
+                body = json.dumps(data)
+                if not isinstance(body, bytes):
+                    body = body.encode("utf-8")
+                self.send_response(code)
+                self.send_header("Content-type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def do_GET(self):
+                parsed = urlparse_mod.urlparse(self.path)
+                
+                # Endpoint /health - risponde SEMPRE, anche durante init
+                if parsed.path == "/health":
+                    health = {
+                        "status": "ok" if robot_state["ready"] else "connecting",
+                        "ready": robot_state["ready"],
+                        "mode": robot_state["mode"],
+                        "error": robot_state["error"],
+                        "ip": args.ip if not use_simulation else None,
+                        "port": args.port if not use_simulation else None,
+                        "is_interacting": robot_state.get("is_interacting", False) or not action_queue.empty()
+                    }
+                    self._send_json(200, health)
+                    return
+                
+                # Endpoint azione robot - richiede robot pronto
+                if not robot_state["ready"] or robot_state["robot"] is None:
+                    self._send_json(503, {
+                        "status": "not_ready",
+                        "message": "Robot in fase di connessione..."
+                    })
+                    return
+                
+                query = urlparse_mod.parse_qs(parsed.query)
+                action = query.get("action", [None])[0]
+                
+                if action and action in actions_map:
+                    action_queue.put(action)
+                    self._send_json(200, {"status": "queued", "message": "Azione messa in coda"})
+                else:
+                    self._send_json(400, {"status": "invalid_action"})
+                    
+            def log_message(self, format, *args):
+                pass
+        
+        # Avvia HTTP server multi-threaded SUBITO (il robot si connette in parallelo)
+        server = ThreadedHTTPServer(('127.0.0.1', 5001), RobotHandler)
+        print("[SERVER] HTTP multi-threaded in ascolto sulla porta 5001")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
     
-    # Cleanup per robot fisico
-    if hasattr(robot, 'cleanup'):
-        robot.cleanup()
+    # =================================================================
+    # MODALITA' CLI (azione singola)
+    # =================================================================
+    else:
+        if use_simulation:
+            print("\n[MODE] SIMULAZIONE ATTIVA")
+            print("-" * 40)
+            cli_robot = SimulatedRobot()
+        else:
+            print("\n[MODE] ROBOT NAO FISICO")
+            print("-" * 40)
+            try:
+                cli_robot = NAORobot(args.ip, args.port)
+            except Exception as e:
+                print("[ERROR] Impossibile connettersi al robot: {}".format(e))
+                print("[INFO] Passaggio a modalita' simulazione...")
+                cli_robot = SimulatedRobot()
+        
+        if not args.action:
+            print("[ERROR] Nessuna azione specificata")
+            sys.exit(1)
+        action_func = actions_map.get(args.action)
+        if action_func:
+            try:
+                action_func(cli_robot)
+                print("\n[OK] Azione '{}' completata".format(args.action))
+            except Exception as e:
+                print("\n[ERROR] Errore durante l'azione: {}".format(e))
+                sys.exit(1)
+        else:
+            print("[ERROR] Azione sconosciuta: {}".format(args.action))
+            sys.exit(1)
+        
+        # Cleanup per robot fisico
+        if hasattr(cli_robot, 'cleanup'):
+            cli_robot.cleanup()
 
 
 if __name__ == "__main__":

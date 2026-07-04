@@ -4,471 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Poker vs Robot</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            color: #fff;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        /* Header */
-        .header {
-            text-align: center;
-            padding: 15px 0;
-            border-bottom: 2px solid #0f3460;
-            margin-bottom: 20px;
-        }
-        
-        .header h1 {
-            font-size: 2rem;
-            color: #e94560;
-            text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
-        }
-        
-        /* Chip display */
-        .chips-display {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            padding: 15px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 15px;
-        }
-        
-        .chip-info {
-            text-align: center;
-        }
-        
-        .chip-info .label {
-            font-size: 0.9rem;
-            color: #888;
-            margin-bottom: 5px;
-        }
-        
-        .chip-info .amount {
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-        
-        .chip-info.user .amount {
-            color: #ffd700;
-        }
-        
-        .chip-info.robot .amount {
-            color: #00d9ff;
-        }
-        
-        .chip-info.pot .amount {
-            color: #e94560;
-        }
-        
-        /* Tavolo da poker */
-        .poker-table {
-            background: radial-gradient(ellipse at center, #35654d 0%, #1a3a2a 100%);
-            border: 12px solid #8b4513;
-            border-radius: 180px;
-            padding: 25px;
-            margin: 15px auto;
-            box-shadow: 
-                inset 0 0 50px rgba(0,0,0,0.5),
-                0 10px 30px rgba(0,0,0,0.5);
-        }
-        
-        .cards-area {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-        
-        .player-section {
-            text-align: center;
-        }
-        
-        .player-label {
-            font-size: 1.1rem;
-            margin-bottom: 12px;
-            padding: 6px 18px;
-            background: rgba(0,0,0,0.5);
-            border-radius: 25px;
-            display: inline-block;
-        }
-        
-        .player-label.robot {
-            color: #00d9ff;
-            border: 2px solid #00d9ff;
-        }
-        
-        .player-label.user {
-            color: #ffd700;
-            border: 2px solid #ffd700;
-        }
-        
-        .player-label.community {
-            color: #ff6b6b;
-            border: 2px solid #ff6b6b;
-        }
-        
-        .bet-indicator {
-            font-size: 0.9rem;
-            color: #fff;
-            margin-left: 10px;
-        }
-        
-        .cards-container {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            flex-wrap: wrap;
-            min-height: 120px;
-        }
-        
-        /* Carte */
-        .card {
-            width: 85px;
-            height: 120px;
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.85rem;
-            color: #333;
-            position: relative;
-            transition: transform 0.3s ease;
-            overflow: hidden;
-        }
-        
-        .card:hover {
-            transform: translateY(-8px);
-        }
-        
-        .card.back {
-            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
-            background-image: repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 10px,
-                rgba(255,255,255,0.05) 10px,
-                rgba(255,255,255,0.05) 20px
-            );
-        }
-        
-        .card.back::after {
-            content: "🤖";
-            font-size: 2rem;
-        }
-        
-        .card .value {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
-        .card .suit {
-            font-size: 2.5rem;
-        }
-        
-        .card .value-bottom {
-            position: absolute;
-            bottom: 6px;
-            right: 6px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            transform: rotate(180deg);
-        }
-        
-        .card.red { color: #d32f2f; }
-        .card.black { color: #212121; }
-        
-        /* Info panel */
-        .info-panel {
-            background: rgba(0, 0, 0, 0.7);
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-            text-align: center;
-            border: 2px solid #0f3460;
-        }
-        
-        .message {
-            font-size: 1.3rem;
-            line-height: 1.5;
-        }
-        
-        .turn-indicator {
-            font-size: 1.1rem;
-            margin-top: 10px;
-            padding: 8px 20px;
-            border-radius: 20px;
-            display: inline-block;
-        }
-        
-        .turn-indicator.your-turn {
-            background: #4caf50;
-            animation: pulse 1s infinite;
-        }
-        
-        .turn-indicator.waiting {
-            background: #666;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        /* Pulsanti azione */
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 25px 0;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 14px 35px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .btn:hover:not(:disabled) {
-            transform: scale(1.05);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        }
-        
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-        
-        .btn-fold {
-            background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
-            color: white;
-        }
-        
-        .btn-check {
-            background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
-            color: white;
-        }
-        
-        .btn-call {
-            background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);
-            color: white;
-        }
-        
-        .btn-raise {
-            background: linear-gradient(135deg, #9c27b0 0%, #6a1b9a 100%);
-            color: white;
-        }
-        
-        .btn-allin {
-            background: linear-gradient(135deg, #ffc107 0%, #ff8f00 100%);
-            color: #000;
-            font-size: 1.2rem;
-        }
-        
-        /* Raise input */
-        .raise-control {
-            display: none;
-            align-items: center;
-            gap: 10px;
-            margin-top: 15px;
-            justify-content: center;
-        }
-        
-        .raise-control.visible {
-            display: flex;
-        }
-        
-        .raise-control input {
-            width: 120px;
-            padding: 10px;
-            font-size: 1.1rem;
-            border: 2px solid #0f3460;
-            border-radius: 10px;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            text-align: center;
-        }
-        
-        .raise-control .btn {
-            padding: 10px 25px;
-        }
-        
-        /* Waiting screen */
-        .waiting-screen {
-            text-align: center;
-            padding: 100px 20px;
-        }
-        
-        .waiting-screen h2 {
-            font-size: 2rem;
-            margin-bottom: 20px;
-            color: #ffd700;
-        }
-        
-        .waiting-screen .loader {
-            font-size: 3rem;
-            animation: spin 2s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Questionario */
-        .questionnaire {
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 20px;
-            padding: 35px;
-            max-width: 650px;
-            margin: 0 auto;
-        }
-        
-        .questionnaire h2 {
-            text-align: center;
-            margin-bottom: 25px;
-            color: #e94560;
-        }
-        
-        .question {
-            margin-bottom: 25px;
-        }
-        
-        .question label {
-            display: block;
-            margin-bottom: 10px;
-            font-size: 1rem;
-        }
-        
-        .rating-scale {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-        }
-        
-        .rating-scale label {
-            flex: 1;
-            text-align: center;
-            padding: 10px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .rating-scale input { display: none; }
-        
-        .rating-scale label:hover {
-            background: rgba(233, 69, 96, 0.3);
-        }
-        
-        .rating-scale input:checked + span {
-            background: #e94560;
-            display: block;
-            padding: 10px;
-            border-radius: 8px;
-            margin: -10px;
-        }
-        
-        .scale-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: #888;
-            margin-top: 6px;
-        }
-        
-        .question textarea {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #0f3460;
-            border-radius: 12px;
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            font-size: 0.95rem;
-            resize: vertical;
-            min-height: 80px;
-        }
-        
-        .btn-submit {
-            background: linear-gradient(135deg, #e94560 0%, #c62828 100%);
-            color: white;
-            width: 100%;
-            margin-top: 20px;
-            padding: 15px;
-            font-size: 1.2rem;
-        }
-        
-        /* End screen */
-        .end-screen {
-            text-align: center;
-            padding: 80px 20px;
-        }
-        
-        .end-screen h2 {
-            font-size: 2.5rem;
-            color: #4caf50;
-            margin-bottom: 20px;
-        }
-        
-        /* Hand over overlay */
-        .hand-result {
-            background: rgba(0,0,0,0.9);
-            padding: 30px;
-            border-radius: 15px;
-            margin: 20px 0;
-        }
-        
-        .hand-result h3 {
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-        }
-        
-        .hand-result.win h3 { color: #4caf50; }
-        .hand-result.lose h3 { color: #f44336; }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .card {
-                width: 65px;
-                height: 95px;
-            }
-            .card .suit { font-size: 1.8rem; }
-            .poker-table { border-radius: 40px; padding: 15px; }
-            .btn { padding: 12px 20px; font-size: 0.95rem; }
-        }
-    </style>
+    <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
     <div class="container">
         <header class="header">
-            <h1>🎰 Poker vs Robot 🤖</h1>
+            <h1>🎰 <span class="gradient-text">Poker vs Robot</span> 🤖</h1>
         </header>
         
         <main id="game-area">
@@ -653,6 +194,7 @@
             const canCheck = s.can_check;
             const callAmount = s.call_amount;
             const opponentThinking = s.opponent_thinking;
+            const robotInteracting = s.robot_interacting;
             
             let handResultHtml = '';
             if (s.hand_over) {
@@ -718,34 +260,34 @@
                 <!-- Info & Actions -->
                 ${!s.hand_over ? `
                     <div class="info-panel">
-                        <div class="turn-indicator ${isMyTurn ? 'your-turn' : 'waiting'}">
-                            ${isMyTurn ? '🎯 È il tuo turno!' : (opponentThinking ? '🤔 Il robot sta pensando...' : '⏳ Turno del robot...')}
+                        <div class="turn-indicator ${isMyTurn && !robotInteracting ? 'your-turn' : 'waiting'}">
+                            ${robotInteracting ? '🤖 Il robot sta agendo...' : (isMyTurn ? '🎯 È il tuo turno!' : (opponentThinking ? '🤔 Il robot sta pensando...' : '⏳ Turno del robot...'))}
                         </div>
                         ${callAmount > 0 ? `<div class="message" style="margin-top:10px;">Da chiamare: <strong>${callAmount}</strong> chips${s.opponent_is_allin ? ' (avversario ALL-IN!)' : ''}</div>` : ''}
                     </div>
                     
                     <div class="action-buttons">
-                        <button class="btn btn-fold" onclick="sendAction('fold')" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
+                        <button class="btn btn-fold" onclick="sendAction('fold')" ${(!isMyTurn || opponentThinking || robotInteracting) ? 'disabled' : ''}>
                             ✗ Fold
                         </button>
                         
                         ${canCheck ? `
-                            <button class="btn btn-check" onclick="sendAction('check')" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
+                            <button class="btn btn-check" onclick="sendAction('check')" ${(!isMyTurn || opponentThinking || robotInteracting) ? 'disabled' : ''}>
                                 ✓ Check
                             </button>
                         ` : `
-                            <button class="btn btn-call" onclick="sendAction('call')" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
+                            <button class="btn btn-call" onclick="sendAction('call')" ${(!isMyTurn || opponentThinking || robotInteracting) ? 'disabled' : ''}>
                                 📞 Call ${callAmount}
                             </button>
                         `}
                         
                         ${s.can_raise ? `
-                            <button class="btn btn-raise" onclick="toggleRaise()" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
+                            <button class="btn btn-raise" onclick="toggleRaise()" ${(!isMyTurn || opponentThinking || robotInteracting) ? 'disabled' : ''}>
                                 ⬆️ Raise
                             </button>
                         ` : ''}
                         
-                        <button class="btn btn-allin" onclick="sendAction('allin')" ${(!isMyTurn || opponentThinking) ? 'disabled' : ''}>
+                        <button class="btn btn-allin" onclick="sendAction('allin')" ${(!isMyTurn || opponentThinking || robotInteracting) ? 'disabled' : ''}>
                             💰 ALL-IN
                         </button>
                     </div>

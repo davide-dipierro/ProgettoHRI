@@ -20,10 +20,18 @@ Choregraphe può avviare NAOqi su una porta random. Questo script:
 param(
     [string]$Ip = "127.0.0.1",
     [switch]$UpdateEnv,
-    [string]$EnvPath = (Join-Path $PSScriptRoot ".env"),
+    [string]$EnvPath = ".env",
     [int]$Top = 12,
     [switch]$Json
 )
+
+if ([string]::IsNullOrEmpty($EnvPath) -or $EnvPath -eq ".env") {
+    if (-not [string]::IsNullOrEmpty($PSScriptRoot)) {
+        $EnvPath = Join-Path $PSScriptRoot ".env"
+    } else {
+        $EnvPath = Join-Path (Get-Location).Path ".env"
+    }
+}
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -117,7 +125,11 @@ $result = foreach ($conn in $candidates) {
     # euristica punteggio: preferisci NAOqi vero (naoqi-bin / naoqi-service)
     $score = 0
     $role = "other"
-    if ($proc.Name -match '(?i)naoqi-bin\.exe|naoqi-service\.exe|naoqi\.exe') {
+    if ($proc.Name -match '(?i)naoqi-bin\.exe') {
+        $score += 250
+        $role = "naoqi"
+    }
+    elseif ($proc.Name -match '(?i)naoqi-service\.exe|naoqi\.exe') {
         $score += 220
         $role = "naoqi"
     }

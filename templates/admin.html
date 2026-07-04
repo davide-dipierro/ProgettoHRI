@@ -4,279 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - HRI Poker Experiment</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #0d0d0d;
-            min-height: 100vh;
-            color: #fff;
-            padding: 15px;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #e94560 0%, #0f3460 100%);
-            padding: 15px 25px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .header h1 { font-size: 1.5rem; }
-        
-        .mode-badge {
-            background: rgba(0,0,0,0.5);
-            padding: 8px 18px;
-            border-radius: 25px;
-            font-size: 0.9rem;
-        }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-        }
-        
-        @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
-        
-        .panel {
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid #333;
-        }
-        
-        .panel h2 {
-            color: #e94560;
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #333;
-        }
-        
-        .panel h3 {
-            color: #00d9ff;
-            margin: 15px 0 10px;
-            font-size: 0.95rem;
-        }
-        
-        /* Game visualization */
-        .game-visual {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .player-box {
-            background: #252525;
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-        }
-        
-        .player-box.user { border: 2px solid #ffd700; }
-        .player-box.robot { border: 2px solid #00d9ff; }
-        .player-box.community { border: 2px solid #e94560; }
-        
-        .player-box .name {
-            font-size: 0.9rem;
-            margin-bottom: 10px;
-            color: #888;
-        }
-        
-        .player-box .chips {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        
-        .player-box.user .chips { color: #ffd700; }
-        .player-box.robot .chips { color: #00d9ff; }
-        
-        .player-box .bet {
-            font-size: 0.9rem;
-            color: #e94560;
-            margin-bottom: 10px;
-        }
-        
-        .mini-cards {
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-            flex-wrap: wrap;
-        }
-        
-        .mini-card {
-            width: 40px;
-            height: 56px;
-            background: #fff;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-        
-        .mini-card.red { color: #d32f2f; }
-        .mini-card.black { color: #212121; }
-        .mini-card.hidden { background: #1a237e; font-size: 0.7rem; color: #fff; }
-        
-        /* Status grid */
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .status-item {
-            background: #252525;
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .status-item .label { font-size: 0.75rem; color: #666; }
-        .status-item .value { font-size: 1.2rem; font-weight: bold; margin-top: 3px; }
-        
-        .status-item.phase .value { color: #e94560; }
-        .status-item.hand .value { color: #ffd700; }
-        .status-item.street .value { color: #4caf50; }
-        .status-item.turn .value { color: #00d9ff; }
-        .status-item.pot .value { color: #ff6b6b; }
-        
-        /* Alerts */
-        .alert {
-            padding: 12px 18px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            text-align: center;
-            font-weight: bold;
-            display: none;
-        }
-        
-        .alert.visible { display: block; }
-        
-        .alert.bluff {
-            background: linear-gradient(135deg, #ff6b6b 0%, #c62828 100%);
-            animation: blink 0.5s infinite;
-        }
-        
-        .alert.thinking {
-            background: #ffc107;
-            color: #000;
-        }
-        
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-        
-        /* Buttons */
-        .btn-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-        }
-        
-        .btn-grid-2 { grid-template-columns: repeat(2, 1fr); }
-        
-        .btn {
-            padding: 12px 15px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .btn:hover:not(:disabled) {
-            transform: scale(1.02);
-            filter: brightness(1.1);
-        }
-        
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        
-        .btn-primary { background: #e94560; color: white; }
-        .btn-success { background: #4caf50; color: white; }
-        .btn-warning { background: #ffc107; color: #000; }
-        .btn-danger { background: #f44336; color: white; }
-        .btn-info { background: #2196f3; color: white; }
-        .btn-secondary { background: #444; color: white; }
-        
-        .btn-full { grid-column: span 3; }
-        .btn-span2 { grid-column: span 2; }
-        
-        /* Input */
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .input-group input {
-            flex: 1;
-            padding: 10px 15px;
-            border: 2px solid #333;
-            border-radius: 8px;
-            background: #252525;
-            color: #fff;
-            font-size: 1rem;
-        }
-        
-        /* Data section */
-        .data-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #333;
-        }
-        
-        .data-row:last-child { border-bottom: none; }
-        .data-row .label { color: #666; }
-        .data-row .value { font-weight: bold; }
-        .data-row .value.highlight { color: #e94560; }
-        
-        /* Timeline */
-        .timeline {
-            max-height: 200px;
-            overflow-y: auto;
-            background: #0a0a0a;
-            border-radius: 8px;
-            padding: 10px;
-        }
-        
-        .timeline-item {
-            padding: 8px;
-            border-left: 3px solid #333;
-            margin-left: 10px;
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-        }
-        
-        .timeline-item.user { border-color: #ffd700; }
-        .timeline-item.robot { border-color: #00d9ff; }
-        .timeline-item.system { border-color: #e94560; }
-        
-        .timeline-item .time { color: #666; font-size: 0.75rem; }
-    </style>
+    <link rel="stylesheet" href="/static/style.css?v=2">
+    <link rel="stylesheet" href="/static/admin.css">
 </head>
 <body>
     <header class="header">
-        <h1>🔬 Admin Panel - HRI Poker Experiment</h1>
+        <h1>🔬 <span class="gradient-text">Admin Panel - HRI Poker Experiment</span></h1>
         <span class="mode-badge" id="mode-badge">-</span>
     </header>
     
     <div class="grid">
         <div>
+            <!-- Robot Config & Connection -->
+            <div class="panel" id="panel-config">
+                <h2>⚙️ Configurazione e Connessione Robot</h2>
+
+                <!-- Status Indicator -->
+                <div class="robot-status-bar" id="robot-status-bar">
+                    <div class="robot-status-dot" id="robot-status-dot"></div>
+                    <span class="robot-status-text" id="robot-status-text">Verifica in corso...</span>
+                </div>
+
+                <div class="config-form">
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label for="config-ip">IP Robot NAO</label>
+                            <input type="text" id="config-ip" placeholder="es. 127.0.0.1 o hostname.local">
+                        </div>
+                        <div class="config-field config-field-small">
+                            <label for="config-port">Porta</label>
+                            <input type="number" id="config-port" placeholder="9559">
+                        </div>
+                    </div>
+                    <div class="config-row">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="config-sim">
+                            <span>Modalità Simulazione (senza robot fisico)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="btn-grid btn-grid-3">
+                    <button class="btn btn-info" onclick="findNaoPort()" id="btn-find-nao">🔍 Cerca Porta</button>
+                    <button class="btn btn-primary" onclick="testRobotConnection()" id="btn-test-robot">🔌 Test Connessione</button>
+                    <button class="btn btn-success" onclick="saveConfig()" id="btn-save-config">💾 Salva &amp; Riavvia</button>
+                </div>
+
+                <div id="port-candidates-container"></div>
+
+                <div class="robot-details" id="robot-details" style="display:none;">
+                    <div class="detail-item">
+                        <span class="detail-label">Processo:</span>
+                        <span class="detail-value" id="detail-process">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Modalità:</span>
+                        <span class="detail-value" id="detail-mode">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Ultimo avvio:</span>
+                        <span class="detail-value" id="detail-last-start">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Errore:</span>
+                        <span class="detail-value detail-error" id="detail-error">-</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Game State -->
-            <div class="panel">
+            <div class="panel" style="margin-top: 20px;">
                 <h2>📊 Stato del Gioco</h2>
                 
                 <div class="status-grid">
@@ -337,9 +134,11 @@
                     <span class="value" id="winner">-</span>
                 </div>
             </div>
-            
+        </div>
+        
+        <div>
             <!-- Controls -->
-            <div class="panel" style="margin-top: 20px;">
+            <div class="panel">
                 <h2>🎮 Controlli Esperimento</h2>
                 
                 <div class="input-group">
@@ -370,11 +169,9 @@
                     <button class="btn btn-danger btn-full" onclick="resetExperiment()">🔄 Reset Esperimento</button>
                 </div>
             </div>
-        </div>
-        
-        <div>
+
             <!-- Experiment Data -->
-            <div class="panel">
+            <div class="panel" style="margin-top: 20px;">
                 <h2>📈 Dati Esperimento</h2>
                 
                 <div class="data-row">
@@ -445,6 +242,10 @@
             ).join('');
         }
 
+        // =============================================================
+        // GAME STATE POLLING
+        // =============================================================
+
         async function fetchStatus() {
             try {
                 const res = await fetch('/api/admin/status');
@@ -457,6 +258,7 @@
 
         function updateUI(s, simMode) {
             document.getElementById('mode-badge').textContent = simMode ? '🔬 Simulazione' : '🤖 Robot Reale';
+            document.getElementById('mode-badge').className = 'mode-badge ' + (simMode ? 'sim' : 'real');
             
             // Status
             document.getElementById('st-phase').textContent = s.phase_name || s.phase;
@@ -511,6 +313,92 @@
             lastState = {...s};
         }
 
+        // =============================================================
+        // ROBOT STATUS POLLING
+        // =============================================================
+
+        async function fetchRobotStatus() {
+            try {
+                const res = await fetch('/api/admin/robot_status');
+                const data = await res.json();
+                if (data.success) {
+                    updateRobotStatusUI(data.status);
+                }
+            } catch (e) {
+                updateRobotStatusUI({ running: false, responsive: false, restarting: false });
+            }
+        }
+
+        function updateRobotStatusUI(st) {
+            const dot = document.getElementById('robot-status-dot');
+            const text = document.getElementById('robot-status-text');
+            const details = document.getElementById('robot-details');
+
+            // Show details section
+            details.style.display = 'block';
+
+            if (st.restarting) {
+                dot.className = 'robot-status-dot restarting';
+                text.textContent = 'Riavvio in corso...';
+                text.className = 'robot-status-text warning';
+            } else if (st.responsive && st.controller_ready) {
+                // Controller risponde E robot pronto
+                const modeLabels = {
+                    'simulation': '🔬 Simulazione',
+                    'real': '🤖 Robot Reale',
+                    'simulation_fallback': '🔬 Simulazione (fallback)'
+                };
+                const modeLabel = modeLabels[st.controller_mode] || st.controller_mode;
+                dot.className = 'robot-status-dot connected';
+                text.textContent = `Connesso - ${modeLabel}`;
+                text.className = 'robot-status-text connected';
+            } else if (st.responsive && !st.controller_ready) {
+                // Controller risponde ma robot ancora in connessione
+                dot.className = 'robot-status-dot restarting';
+                text.textContent = 'Controller attivo, connessione al NAO in corso...';
+                text.className = 'robot-status-text warning';
+            } else if (st.running) {
+                dot.className = 'robot-status-dot warning';
+                text.textContent = 'Processo in avvio...';
+                text.className = 'robot-status-text warning';
+            } else {
+                dot.className = 'robot-status-dot disconnected';
+                text.textContent = 'Non connesso';
+                text.className = 'robot-status-text disconnected';
+            }
+
+            // Details
+            document.getElementById('detail-process').textContent = st.running ? '✅ Attivo' : '❌ Non attivo';
+            
+            // Show actual controller mode if available
+            if (st.controller_mode) {
+                const modeText = {
+                    'simulation': '🔬 Simulazione',
+                    'real': '🤖 Robot Reale',
+                    'simulation_fallback': '⚠️ Simulazione (NAO non raggiungibile)',
+                    'initializing': '⏳ In inizializzazione...'
+                };
+                document.getElementById('detail-mode').textContent = modeText[st.controller_mode] || st.controller_mode;
+            } else {
+                document.getElementById('detail-mode').textContent = st.simulation ? '🔬 Simulazione' : '🤖 Robot Reale';
+            }
+            
+            document.getElementById('detail-last-start').textContent = st.last_start || '-';
+            
+            // Show errors from both server.py and controller
+            const errorEl = document.getElementById('detail-error');
+            const err = st.controller_error || st.last_error;
+            if (err) {
+                errorEl.textContent = err;
+            } else {
+                errorEl.textContent = 'Nessuno';
+            }
+        }
+
+        // =============================================================
+        // ADMIN ACTIONS
+        // =============================================================
+
         async function sendAction(action, data = {}) {
             try {
                 const res = await fetch('/api/admin/action', {
@@ -537,8 +425,157 @@
         }
         function triggerRobot(behavior) { sendAction('trigger_robot', { behavior }); }
 
+        // =============================================================
+        // ROBOT CONFIGURATION
+        // =============================================================
+
+        async function fetchConfig() {
+            try {
+                const res = await fetch('/api/admin/config');
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('config-ip').value = data.NAO_IP;
+                    document.getElementById('config-port').value = data.NAO_PORT;
+                    document.getElementById('config-sim').checked = data.SIMULATION_MODE;
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function saveConfig() {
+            const btn = document.getElementById('btn-save-config');
+            btn.textContent = '⏳ Salvataggio...';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/admin/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        NAO_IP: document.getElementById('config-ip').value,
+                        NAO_PORT: document.getElementById('config-port').value,
+                        SIMULATION_MODE: document.getElementById('config-sim').checked
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    addLog('Configurazione salvata. Robot in riavvio...', 'system');
+                    // Poll più frequente durante il riavvio
+                    let checks = 0;
+                    const checkInterval = setInterval(() => {
+                        fetchRobotStatus();
+                        checks++;
+                        if (checks > 10) clearInterval(checkInterval);
+                    }, 1000);
+                } else {
+                    addLog('Errore salvataggio configurazione', 'system');
+                }
+            } catch(e) { 
+                console.error(e);
+                addLog('Errore di rete durante salvataggio', 'system');
+            }
+            btn.textContent = '💾 Salva & Riavvia';
+            btn.disabled = false;
+        }
+
+        async function testRobotConnection() {
+            const btn = document.getElementById('btn-test-robot');
+            btn.textContent = '⏳ Test...';
+            btn.disabled = true;
+            addLog('Test connessione robot...', 'system');
+            try {
+                const res = await fetch('/api/admin/test_robot', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    addLog(`✅ ${data.message} (modo: ${data.details.mode})`, 'system');
+                } else {
+                    addLog(`❌ ${data.error}`, 'system');
+                }
+            } catch(e) { 
+                addLog('❌ Errore di rete durante il test', 'system');
+            }
+            btn.textContent = '🔌 Test Connessione';
+            btn.disabled = false;
+            fetchRobotStatus();
+        }
+
+        function selectPort(port) {
+            document.getElementById('config-port').value = port;
+            addLog(`Porta selezionata: ${port}`, 'system');
+            // Close the candidates panel
+            document.getElementById('port-candidates-container').innerHTML = '';
+        }
+
+        function closePortCandidates() {
+            document.getElementById('port-candidates-container').innerHTML = '';
+        }
+
+        function renderPortCandidates(candidates) {
+            const container = document.getElementById('port-candidates-container');
+            if (!candidates || candidates.length === 0) {
+                container.innerHTML = `
+                    <div class="port-candidates">
+                        <div class="port-candidates-empty">Nessuna porta Choregraphe/NAOqi trovata.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const roleLabels = { naoqi: 'NAOqi', gateway: 'Gateway', choregraphe: 'Choregraphe', other: 'Altro' };
+
+            let itemsHtml = candidates.map((c, i) => `
+                <div class="port-candidate-item${i === 0 ? ' best' : ''}" onclick="selectPort(${c.port})">
+                    <span class="port-candidate-port">${c.port}</span>
+                    <span class="port-candidate-role ${c.role}">${roleLabels[c.role] || c.role}</span>
+                    <span class="port-candidate-process">${c.process || '-'}</span>
+                    <span class="port-candidate-score">score: ${c.score}</span>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="port-candidates">
+                    <div class="port-candidates-header">
+                        <span>📡 Porte trovate (clicca per selezionare)</span>
+                        <button class="close-btn" onclick="closePortCandidates()">✕</button>
+                    </div>
+                    ${itemsHtml}
+                </div>
+            `;
+        }
+
+        async function findNaoPort() {
+            const btn = document.getElementById('btn-find-nao');
+            btn.textContent = '⏳ Ricerca...';
+            btn.disabled = true;
+            addLog('Ricerca porta Choregraphe in corso...', 'system');
+            try {
+                const res = await fetch('/api/admin/find_nao', { method: 'POST' });
+                const data = await res.json();
+                if (data.success && data.candidates && data.candidates.length > 0) {
+                    // Auto-fill with best port
+                    document.getElementById('config-port').value = data.port;
+                    addLog(`Trovate ${data.candidates.length} porte. Migliore: ${data.port}`, 'system');
+                    // Show all candidates for manual selection
+                    renderPortCandidates(data.candidates);
+                } else {
+                    addLog('Nessuna porta Choregraphe trovata.', 'system');
+                    renderPortCandidates([]);
+                }
+            } catch(e) { console.error(e); }
+            btn.textContent = '🔍 Cerca Porta';
+            btn.disabled = false;
+        }
+
+        // =============================================================
+        // INIT
+        // =============================================================
+
+        // Polling stato gioco (veloce - 300ms)
         setInterval(fetchStatus, 300);
+        // Polling stato robot (lento - 3s)
+        setInterval(fetchRobotStatus, 3000);
+        
         fetchStatus();
+        fetchRobotStatus();
+        fetchConfig();
         addLog('Admin panel avviato', 'system');
     </script>
 </body>

@@ -137,3 +137,63 @@ PAUSE = os.environ.get("PAUSE", "false").lower() == "true"
 
 DATA_FILE = os.path.join(DATA_DIR, "experiment_results.csv")
 QUESTIONNAIRE_FILE = os.path.join(DATA_DIR, "questionnaire_results.csv")
+
+
+# =============================================================================
+# ADMIN CONFIGURATIONS
+# =============================================================================
+
+def save_env_file(updates):
+    import os
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    lines = []
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            lines = f.readlines()
+            
+    new_lines = []
+    updated_keys = set()
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#") and "=" in stripped:
+            key = stripped.split("=")[0].strip()
+            if key in updates:
+                new_lines.append("{}={}\n".format(key, updates[key]))
+                updated_keys.add(key)
+            else:
+                new_lines.append(line)
+        else:
+            new_lines.append(line)
+            
+    for k, v in updates.items():
+        if k not in updated_keys:
+            new_lines.append("{}={}\n".format(k, v))
+            
+    with open(env_path, "w") as f:
+        f.writelines(new_lines)
+
+def reload_config():
+    global NAO_IP, NAO_PORT, SIMULATION_MODE, PYTHON27_PATH
+    global STARTING_CHIPS, SMALL_BLIND, BIG_BLIND
+    global ROBOT_THINK_TIME_MIN, ROBOT_THINK_TIME_MAX
+    # Ricarica file bypassando ambiente pre-esistente se non .env native
+    import os
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if os.path.exists(env_path):
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    os.environ[key.strip()] = value.strip()
+                    
+    NAO_IP = os.environ.get("NAO_IP", "127.0.0.1")
+    NAO_PORT = int(os.environ.get("NAO_PORT", "9559"))
+    SIMULATION_MODE = os.environ.get("SIMULATION_MODE", "true").lower() == "true"
+    PYTHON27_PATH = os.environ.get("PYTHON27_PATH",
+                                   os.environ.get("PYTHON_PATH", "python"))
+    STARTING_CHIPS = int(os.environ.get("STARTING_CHIPS", "1000"))
+    SMALL_BLIND = int(os.environ.get("SMALL_BLIND", "10"))
+    BIG_BLIND = int(os.environ.get("BIG_BLIND", "20"))
+    ROBOT_THINK_TIME_MIN = float(os.environ.get("ROBOT_THINK_TIME_MIN", "1"))
+    ROBOT_THINK_TIME_MAX = float(os.environ.get("ROBOT_THINK_TIME_MAX", "2"))
