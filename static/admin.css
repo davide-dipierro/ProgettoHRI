@@ -469,3 +469,100 @@
     font-size: 0.9rem;
 }
 
+/* ============================================
+   ROBOT ENABLE/DISABLE TOGGLE
+   ============================================ */
+
+.robot-toggle-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--glass-border);
+    transition: border-color 0.4s ease, background 0.4s ease;
+}
+
+.robot-toggle-bar.enabled {
+    border-color: rgba(46, 204, 113, 0.4);
+}
+
+.robot-toggle-bar.disabled {
+    border-color: rgba(231, 76, 60, 0.4);
+    background: rgba(231, 76, 60, 0.08);
+}
+
+.robot-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.robot-toggle-label.enabled {
+    color: #2ecc71;
+}
+
+.robot-toggle-label.disabled {
+    color: #e74c3c;
+}
+
+.robot-toggle-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+    margin-left: 6px;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    width: 56px;
+    height: 28px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(231, 76, 60, 0.5);
+    border-radius: 28px;
+    transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.4s ease, box-shadow 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: rgba(46, 204, 113, 0.6);
+    box-shadow: 0 0 12px rgba(46, 204, 113, 0.3);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(28px);
+}
+

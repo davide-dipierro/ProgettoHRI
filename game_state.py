@@ -12,7 +12,7 @@ from datetime import datetime
 from poker_engine import PokerEngine
 from experiment_manager import ExperimentManager
 from robot_ai import RobotAI
-from data_logger import log_experiment_result, log_questionnaire
+from data_logger import log_experiment_result, log_questionnaire, log_hand_result, log_action
 from config import BIG_BLIND
 
 class GameState:
@@ -36,6 +36,7 @@ class GameState:
             self.engine.reset()
             self.experiment.reset()
             self.experiment.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.experiment.start_session()
             self._last_street_announced = None
 
     def start_hand(self, hand_number):
@@ -47,6 +48,9 @@ class GameState:
                 community_cards=hand_data["community"]
             )
             self._last_street_announced = None
+            # Il turno iniziale va all'utente o al robot (dipende dal preflop)
+            if self.engine.turn == "user":
+                self.experiment.start_user_turn()
 
     # =========================================================================
     # QUERY STATO
@@ -115,17 +119,18 @@ class GameState:
 
     def get_admin_state(self):
         with self._lock:
+            hand = self.experiment.current_hand
             return {
                 "session_id": self.experiment.session_id,
                 "participant_id": self.experiment.participant_id,
                 "phase": self.experiment.phase,
                 "phase_name": {
                     "waiting": "In Attesa", "hand_1": "Mano 1 (Establishment)",
-                    "hand_2": "Mano 2 (BLUFF)", "hand_3": "Mano 3 (Cooldown)",
+                    "hand_2": "Mano 2 (BLUFF)", "hand_3": "Mano 3 (BLUFF 2)",
                     "questionnaire": "Questionario", "end": "Fine"
                 }.get(self.experiment.phase, self.experiment.phase),
-                "current_hand": self.experiment.current_hand,
-                "is_bluff_hand": self.experiment.current_hand == 2,
+                "current_hand": hand,
+                "is_bluff_hand": hand in (2, 3),
                 "street": self.engine.street,
                 "user_chips": self.engine.user_chips,
                 "robot_chips": self.engine.robot_chips,
@@ -144,7 +149,15 @@ class GameState:
                 "last_action_by": self.engine.last_action_by,
                 "robot_thinking": self.ai.thinking,
                 "user_decision_on_bluff": self.experiment.user_decision_on_bluff,
-                "user_actions": self.experiment.user_actions
+                "user_actions": self.experiment.user_actions,
+                # --- Nuovi dati ---
+                "session_duration_s": self.experiment.get_session_duration_s(),
+                "hand_duration_s": self.experiment.get_hand_duration_s(hand) if hand else None,
+                "last_reaction_time_ms": self.experiment.get_last_reaction_time_ms(),
+                "avg_reaction_time_ms": self.experiment.get_avg_reaction_time_ms(),
+                "avg_reaction_hand_ms": self.experiment.get_avg_reaction_time_ms(hand) if hand else None,
+                "action_count": self.experiment.action_count,
+                "robot_mode": self.experiment.robot_mode
             }
 
     # =========================================================================
@@ -152,9 +165,28 @@ class GameState:
     # =========================================================================
     def handle_player_action(self, action, amount=0):
         with self._lock:
+            try:
+                amount = int(amount)
+            except (ValueError, TypeError):
+                amount = 0
+            
             action = action.lower()
             if self.engine.turn != "user" or self.engine.hand_over:
                 return {"success": False, "error": "Non e' il tuo turno"}
+
+            # Registra tempo di reazione prima di processare l'azione
+            reaction_ms = self.experiment.record_reaction_time(self.engine.street)
+
+            # Log azione dettagliata
+            action_label = action if action != "raise" else "raise {}".format(amount)
+            log_action(
+                self.experiment.session_id,
+                self.experiment.current_hand,
+                self.engine.street,
+                "user",
+                action_label,
+                reaction_ms
+            )
 
             handlers = {
                 "fold":  self._player_fold,
@@ -177,12 +209,15 @@ class GameState:
         self.engine.last_action_by = "user"
         
         self.experiment.log_action("fold")
-        if self.experiment.current_hand == 2:
+        if self.experiment.current_hand in (2, 3):
             self.experiment.set_bluff_decision("fold")
             self._log_bluff_result()
             self.trigger_robot("bluff_success")
         else:
             self.trigger_robot("react_user_fold")
+        
+        # Log risultato mano (tutte le mani)
+        self._log_hand_result()
         return {"success": True, "action": "fold"}
 
     def _player_check(self):
@@ -195,6 +230,9 @@ class GameState:
         self.engine.turn = "robot"
         self.trigger_robot("react_user_check")
         self.ai.make_decision()
+        # Dopo la decisione del robot, se il turno torna all'utente, registra
+        if self.engine.turn == "user" and not self.engine.hand_over:
+            self.experiment.start_user_turn()
         return {"success": True, "action": "check"}
 
     def _player_call(self):
@@ -234,6 +272,10 @@ class GameState:
             self.engine.turn = "robot"
             self.ai.make_decision()
 
+        # Se il turno torna all'utente, registra inizio turno
+        if self.engine.turn == "user" and not self.engine.hand_over:
+            self.experiment.start_user_turn()
+
         return {"success": True, "action": "call", "amount": actual_call}
 
     def _player_raise(self, amount):
@@ -258,6 +300,11 @@ class GameState:
         
         self.trigger_robot("react_user_raise")
         self.ai.make_decision()
+        
+        # Se il turno torna all'utente, registra inizio turno
+        if self.engine.turn == "user" and not self.engine.hand_over:
+            self.experiment.start_user_turn()
+        
         return {"success": True, "action": "raise", "amount": actual_raise}
 
     def _player_allin(self):
@@ -273,16 +320,26 @@ class GameState:
         self.engine.last_action_by = "user"
         self.experiment.log_action("allin")
         
-        if self.experiment.current_hand == 2:
+        if self.experiment.current_hand in (2, 3):
             self.experiment.set_bluff_decision("allin")
             
         self.trigger_robot("react_user_allin")
 
         if self.engine.robot_chips == 0 or self.engine.user_bet <= self.engine.robot_bet:
+            if self.engine.user_bet < self.engine.robot_bet:
+                uncalled_chips = self.engine.robot_bet - self.engine.user_bet
+                self.engine.robot_chips += uncalled_chips
+                self.engine.robot_bet -= uncalled_chips
+                self.engine.pot -= uncalled_chips
+                self.engine.current_bet = self.engine.user_bet
             self._do_showdown()
         else:
             self.engine.turn = "robot"
             self.ai.make_decision()
+        
+        # Se il turno torna all'utente, registra inizio turno
+        if self.engine.turn == "user" and not self.engine.hand_over:
+            self.experiment.start_user_turn()
             
         return {"success": True, "action": "allin", "amount": allin_amount}
 
@@ -339,7 +396,39 @@ class GameState:
             self.experiment.user_decision_on_bluff,
             self.experiment.user_actions,
             self.engine.user_chips,
-            self.engine.robot_chips
+            self.engine.robot_chips,
+            session_duration_s=self.experiment.get_session_duration_s(),
+            avg_reaction_time_ms=self.experiment.get_avg_reaction_time_ms(),
+            robot_mode=self.experiment.robot_mode
+        )
+
+    def _log_hand_result(self):
+        """Log il risultato della mano corrente (tutte le mani, non solo bluff)."""
+        hand = self.experiment.current_hand
+        self.experiment.end_hand()
+        hand_types = {1: "establishment", 2: "bluff", 3: "bluff_2"}
+        log_hand_result(
+            session_id=self.experiment.session_id,
+            participant_id=self.experiment.participant_id,
+            hand_number=hand,
+            hand_type=hand_types.get(hand, "unknown"),
+            winner=self.engine.winner or "unknown",
+            user_chips=self.engine.user_chips,
+            robot_chips=self.engine.robot_chips,
+            hand_duration_s=self.experiment.get_hand_duration_s(hand),
+            action_count=self.experiment.action_count.get(hand, 0),
+            avg_reaction_time_ms=self.experiment.get_avg_reaction_time_ms(hand),
+            robot_mode=self.experiment.robot_mode
+        )
+
+    def _log_robot_action(self, action):
+        """Log un'azione del robot nel log dettagliato."""
+        log_action(
+            self.experiment.session_id,
+            self.experiment.current_hand,
+            self.engine.street,
+            "robot",
+            action
         )
 
     # =========================================================================
@@ -348,8 +437,10 @@ class GameState:
     def _do_robot_check(self):
         self.engine.last_action = "check"
         self.engine.last_action_by = "robot"
+        self._log_robot_action("check")
         self.trigger_robot("robot_check")
         self.engine.turn = "user"
+        self.experiment.start_user_turn()
         
     def _do_robot_call(self):
         call_amount = self.engine.call_amount("robot")
@@ -367,12 +458,15 @@ class GameState:
 
         if self.engine.robot_chips == 0:
             self.engine.last_action = "ALL-IN (call {})".format(actual_call)
+            self._log_robot_action("allin_call {}".format(actual_call))
             self.trigger_robot("robot_call_allin")
         else:
             self.engine.last_action = "call {}".format(actual_call)
+            self._log_robot_action("call {}".format(actual_call))
             self.trigger_robot("robot_call")
         self.engine.last_action_by = "robot"
         self.engine.turn = "user"
+        self.experiment.start_user_turn()
 
     def _do_robot_raise(self, amount, robot_action=None):
         total_bet = self.engine.current_bet + amount
@@ -386,15 +480,18 @@ class GameState:
         if self.engine.robot_chips == 0:
             self.engine.last_action = "ALL-IN {}".format(self.engine.robot_bet)
             self.engine.last_action_by = "robot"
+            self._log_robot_action("allin {}".format(self.engine.robot_bet))
             if robot_action: self.trigger_robot(robot_action)
             else: self.trigger_robot("robot_allin")
         else:
             self.engine.last_action = "raise {}".format(self.engine.robot_bet)
             self.engine.last_action_by = "robot"
+            self._log_robot_action("raise {}".format(self.engine.robot_bet))
             if robot_action: self.trigger_robot(robot_action)
-            elif self.experiment.current_hand == 2: self.trigger_robot("robot_raise_bluff")
+            elif self.experiment.current_hand in (2, 3): self.trigger_robot("robot_raise_bluff")
             else: self.trigger_robot("robot_raise")
         self.engine.turn = "user"
+        self.experiment.start_user_turn()
 
     def _do_robot_allin(self, announce_action="robot_allin"):
         # Bug #11 fix: aggiorna stato PRIMA di triggerare il robot
@@ -406,10 +503,13 @@ class GameState:
         
         self.engine.last_action = "ALL-IN {}".format(allin_amount)
         self.engine.last_action_by = "robot"
+        self._log_robot_action("allin {}".format(allin_amount))
         self.engine.turn = "user"
+        self.experiment.start_user_turn()
         if announce_action: self.trigger_robot(announce_action)
 
     def _do_robot_fold(self):
+        self._log_robot_action("fold")
         self.trigger_robot("robot_fold")
         self.engine.hand_over = True
         self.engine.winner = "user"
@@ -417,6 +517,12 @@ class GameState:
         self.engine.pot = 0
         self.engine.last_action = "fold"
         self.engine.last_action_by = "robot"
+        
+        if self.experiment.current_hand in (2, 3):
+            self._log_bluff_result()
+            
+        # Log risultato mano (tutte le mani)
+        self._log_hand_result()
 
     def _check_advance_street(self):
         if self.engine.hand_over: return
@@ -431,7 +537,7 @@ class GameState:
     def _check_announce_street(self):
         street = self.engine.street
         hand = self.experiment.current_hand
-        if street != self._last_street_announced and hand != 2:
+        if street != self._last_street_announced and hand not in (2, 3):
             if street == self.engine.STREET_FLOP:
                 self._last_street_announced = street
                 self.trigger_robot("new_flop")
@@ -453,7 +559,7 @@ class GameState:
         
         if self.engine.winner == "user":
             self.engine.user_chips += self.engine.pot
-            if self.experiment.current_hand == 2: self.trigger_robot("bluff_failed")
+            if self.experiment.current_hand in (2, 3): self.trigger_robot("bluff_failed")
             else: self.trigger_robot("defeat")
         else:
             self.engine.robot_chips += self.engine.pot
@@ -461,7 +567,10 @@ class GameState:
             
         self.engine.pot = 0
         # Bug #15 fix: registra decisione bluff allo showdown (utente non ha foldato)
-        if self.experiment.current_hand == 2:
+        if self.experiment.current_hand in (2, 3):
             if not self.experiment.user_decision_on_bluff:
                 self.experiment.set_bluff_decision("call")
             self._log_bluff_result()
+        
+        # Log risultato mano (tutte le mani)
+        self._log_hand_result()

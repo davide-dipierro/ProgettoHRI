@@ -97,7 +97,7 @@ class RobotAI:
                 def _delayed_allin():
                     time.sleep(9)
                     with self.game._lock:
-                        if not self.game.engine.hand_over:
+                        if not self.game.engine.hand_over and self.game.engine.turn == "robot":
                             self.game._do_robot_allin(announce_action=None)
                 threading.Thread(target=_delayed_allin).start()
             else:
@@ -117,7 +117,7 @@ class RobotAI:
                 def _delayed_allin():
                     time.sleep(9)
                     with self.game._lock:
-                        if not self.game.engine.hand_over:
+                        if not self.game.engine.hand_over and self.game.engine.turn == "robot":
                             self.game._do_robot_allin(announce_action=None)
                 threading.Thread(target=_delayed_allin).start()
         else:
@@ -125,22 +125,5 @@ class RobotAI:
             self.game._check_advance_street()
 
     def _ai_hand_3(self, call_amount, user_is_allin, street):
-        if street == self.game.engine.STREET_PREFLOP and self.game.engine.robot_bet == BIG_BLIND:
-            self.game.trigger_robot("cooldown")
-
-        if user_is_allin and call_amount > 0:
-            if call_amount > self.game.engine.robot_chips // 2:
-                self.game._do_robot_fold()
-            else:
-                self.game._do_robot_call()
-                self.game._do_showdown()
-            return
-        elif call_amount > 0:
-            if call_amount > self.game.engine.robot_chips // 2:
-                self.game._do_robot_fold()
-            else:
-                self.game._do_robot_call()
-                self.game._check_advance_street()
-        else:
-            self.game._do_robot_check()
-            self.game._check_advance_street()
+        """Mano 3 è una seconda mano di bluff: stessa strategia aggressiva della mano 2."""
+        self._ai_hand_2(call_amount, user_is_allin, street)

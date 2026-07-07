@@ -45,7 +45,8 @@ _robot_status = {
     "last_error": None,
     "ip": config.NAO_IP,
     "port": config.NAO_PORT,
-    "simulation": config.SIMULATION_MODE
+    "simulation": config.SIMULATION_MODE,
+    "robot_enabled": True
 }
 _status_lock = threading.Lock()
 
@@ -136,7 +137,15 @@ def trigger_robot(action):
     
     Non blocca il thread Flask: la richiesta HTTP viene inviata in un thread
     separato con timeout di 30s per gestire azioni lunghe (es. bluff ~8s).
+    
+    Se il robot e' disattivato (robot_enabled=False), l'azione viene ignorata
+    senza influenzare il motore di gioco o l'IA.
     """
+    with _status_lock:
+        if not _robot_status["robot_enabled"]:
+            print("[ROBOT] DISABLED - skipping: {}".format(action))
+            return False
+
     def _send():
         try:
             url = "http://127.0.0.1:5001/?action={}".format(action)
@@ -174,6 +183,7 @@ def ping_robot_server():
 # Stato di gioco (singleton)
 game = GameState()
 game.set_robot_trigger(trigger_robot)
+game.experiment.robot_mode = "simulation" if config.SIMULATION_MODE else "real"
 
 
 # =============================================================================
@@ -233,10 +243,13 @@ def api_robot_status():
 
 @app.route('/api/admin/status')
 def api_admin_status():
+    with _status_lock:
+        robot_enabled = _robot_status["robot_enabled"]
     return jsonify({
         "success": True,
         "state": game.get_admin_state(),
-        "simulation_mode": config.SIMULATION_MODE
+        "simulation_mode": config.SIMULATION_MODE,
+        "robot_enabled": robot_enabled
     })
 
 
@@ -258,6 +271,8 @@ def api_admin_config():
         
         config.save_env_file(updates)
         config.reload_config()
+        # Aggiorna robot_mode dopo cambio configurazione
+        game.experiment.robot_mode = "simulation" if config.SIMULATION_MODE else "real"
         restart_robot_server_async()
         return jsonify({"success": True, "message": "Configurazione salvata. Robot in riavvio..."})
 
@@ -286,6 +301,32 @@ def api_admin_robot_status():
         status["controller_error"] = None
     
     return jsonify({"success": True, "status": status})
+
+
+@app.route('/api/admin/toggle_robot', methods=['POST'])
+def api_admin_toggle_robot():
+    """Attiva/disattiva l'invio di animazioni e parlato al robot.
+    
+    Il motore di gioco e l'IA continuano a funzionare normalmente.
+    Solo l'invio fisico/simulato al robot viene bloccato.
+    """
+    with _status_lock:
+        _robot_status["robot_enabled"] = not _robot_status["robot_enabled"]
+        new_state = _robot_status["robot_enabled"]
+    
+    # Aggiorna robot_mode nell'experiment manager
+    if new_state:
+        game.experiment.robot_mode = "simulation" if config.SIMULATION_MODE else "real"
+    else:
+        game.experiment.robot_mode = "disabled"
+    
+    state_label = "ATTIVATO" if new_state else "DISATTIVATO"
+    print("[SERVER] Robot {}".format(state_label))
+    return jsonify({
+        "success": True,
+        "robot_enabled": new_state,
+        "message": "Robot {}".format(state_label)
+    })
 
 
 @app.route('/api/admin/test_robot', methods=['POST'])

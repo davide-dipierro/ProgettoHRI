@@ -138,17 +138,10 @@
         }
 
         async function submitQuestionnaire() {
-            const q1 = document.querySelector('input[name="q1"]:checked')?.value || '';
-            const q2 = document.querySelector('input[name="q2"]:checked')?.value || '';
-            const q3 = document.querySelector('input[name="q3"]:checked')?.value || '';
-            const q4 = document.querySelector('input[name="q4"]:checked')?.value || '';
-            const q5 = document.querySelector('input[name="q5"]:checked')?.value || '';
-            const comments = document.getElementById('comments')?.value || '';
-            
             const res = await fetch('/api/player/questionnaire', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ questionnaire: { q1, q2, q3, q4, q5, comments } })
+                body: JSON.stringify({ questionnaire: { mode: 'google_form_completed' } })
             });
             
             // Reset per permettere aggiornamento a fase end
@@ -322,59 +315,24 @@
 
         function renderQuestionnaire() {
             return `
-                <div class="questionnaire">
+                <div class="questionnaire" style="text-align: center; max-width: 600px; margin: 0 auto;">
                     <h2>📋 Questionario</h2>
-                    <p style="text-align:center;margin-bottom:25px;color:#888;">
-                        Rispondi a queste domande sulla tua esperienza.
+                    <p style="margin-bottom:25px;color:#888;">
+                        Compila il questionario cliccando sul link qui sotto o scansionando il QR code.
                     </p>
                     
-                    <div class="question">
-                        <label>1. Quanto ti sei fidato del comportamento del robot?</label>
-                        <div class="rating-scale">
-                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q1" value="${n}"><span>${n}</span></label>`).join('')}
-                        </div>
-                        <div class="scale-labels"><span>Per niente</span><span>Molto</span></div>
+                    <div style="margin-bottom: 30px;">
+                        <a href="https://forms.gle/1DG5EjJviAvraedm9" target="_blank" style="font-size: 1.2em; color: #007bff; text-decoration: none; font-weight: bold; border: 2px solid #007bff; padding: 10px 20px; border-radius: 5px; display: inline-block;">
+                            🔗 Vai al Questionario
+                        </a>
                     </div>
-                    
-                    <div class="question">
-                        <label>2. Quanto ti sei sentito sotto pressione durante il gioco?</label>
-                        <div class="rating-scale">
-                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q2" value="${n}"><span>${n}</span></label>`).join('')}
-                        </div>
-                        <div class="scale-labels"><span>Per niente</span><span>Molto</span></div>
-                    </div>
-                    
-                    <div class="question">
-                        <label>3. Quanto percepisci il robot come un giocatore competente?</label>
-                        <div class="rating-scale">
-                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q3" value="${n}"><span>${n}</span></label>`).join('')}
-                        </div>
-                        <div class="scale-labels"><span>Per niente</span><span>Molto</span></div>
-                    </div>
-                    
-                    <div class="question">
-                        <label>4. Quanto eri sicuro delle tue decisioni?</label>
-                        <div class="rating-scale">
-                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q4" value="${n}"><span>${n}</span></label>`).join('')}
-                        </div>
-                        <div class="scale-labels"><span>Per niente</span><span>Molto</span></div>
-                    </div>
-                    
-                    <div class="question">
-                        <label>5. Quanto ti reputi esperto di poker?</label>
-                        <div class="rating-scale">
-                            ${[1,2,3,4,5].map(n => `<label><input type="radio" name="q5" value="${n}"><span>${n}</span></label>`).join('')}
-                        </div>
-                        <div class="scale-labels"><span>Assolutamente no</span><span>Assolutamente sì</span></div>
-                    </div>
-                    
-                    <div class="question">
-                        <label>Commenti (opzionale):</label>
-                        <textarea id="comments" placeholder="Scrivi qui..."></textarea>
+
+                    <div style="margin-bottom: 30px;">
+                        <img src="/static/qrcode_questionario.png" alt="QR Code Questionario" style="width: 410px; height: 410px; max-width: 100%; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
                     </div>
                     
                     <button class="btn btn-submit" onclick="submitQuestionnaire()">
-                        📤 Invia Risposte
+                        ✅ Ho compilato il questionario
                     </button>
                 </div>
             `;

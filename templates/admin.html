@@ -25,6 +25,19 @@
                     <span class="robot-status-text" id="robot-status-text">Verifica in corso...</span>
                 </div>
 
+                <!-- Robot Enable/Disable Toggle -->
+                <div class="robot-toggle-bar enabled" id="robot-toggle-bar">
+                    <div class="robot-toggle-label enabled" id="robot-toggle-label">
+                        <span id="robot-toggle-icon">🤖</span>
+                        <span id="robot-toggle-text">Robot ATTIVO</span>
+                        <span class="robot-toggle-hint" id="robot-toggle-hint">Animazioni e parlato abilitati</span>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="robot-toggle-checkbox" checked onchange="toggleRobot()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
                 <div class="config-form">
                     <div class="config-row">
                         <div class="config-field">
@@ -96,7 +109,7 @@
                 </div>
                 
                 <div class="alert bluff" id="alert-bluff">
-                    ⚠️ FASE BLUFF - Misurando tempo reazione!
+                    ⚠️ FASE BLUFF - Turno dell'utente
                 </div>
                 
                 <div class="alert thinking" id="alert-thinking">
@@ -150,7 +163,7 @@
                 <div class="btn-grid">
                     <button class="btn btn-success" onclick="startHand(1)">Mano 1</button>
                     <button class="btn btn-danger" onclick="startHand(2)">Mano 2 (BLUFF)</button>
-                    <button class="btn btn-info" onclick="startHand(3)">Mano 3</button>
+                    <button class="btn btn-info" onclick="startHand(3)">Mano 3 (BLUFF 2)</button>
                     <button class="btn btn-warning btn-span2" onclick="nextHand()">➡️ Prossima Mano</button>
                     <button class="btn btn-secondary" onclick="showQuestionnaire()">📋 Questionario</button>
                 </div>
@@ -183,6 +196,34 @@
                     <span class="value" id="data-participant">-</span>
                 </div>
                 <div class="data-row">
+                    <span class="label">Modalità Robot</span>
+                    <span class="value" id="data-robot-mode">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Durata Sessione</span>
+                    <span class="value" id="data-session-duration">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Durata Mano Corrente</span>
+                    <span class="value" id="data-hand-duration">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Ultimo Tempo Reazione</span>
+                    <span class="value highlight" id="data-last-reaction">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Tempo Reazione Medio (mano)</span>
+                    <span class="value highlight" id="data-avg-reaction-hand">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Tempo Reazione Medio (sessione)</span>
+                    <span class="value highlight" id="data-avg-reaction">-</span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Azioni per Mano</span>
+                    <span class="value" id="data-action-counts">-</span>
+                </div>
+                <div class="data-row">
                     <span class="label">Decisione su Bluff</span>
                     <span class="value highlight" id="data-decision">-</span>
                 </div>
@@ -206,6 +247,13 @@
         
         const SUITS = { 'hearts': '♥', 'diamonds': '♦', 'clubs': '♣', 'spades': '♠' };
         const VALUES = { 'ace': 'A', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8', '9': '9', '10': '10', 'jack': 'J', 'queen': 'Q', 'king': 'K' };
+
+        function formatDuration(seconds) {
+            if (seconds === undefined || seconds === null) return '-';
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
 
         function parseCard(name) {
             const parts = name.split('_of_');
@@ -251,12 +299,12 @@
                 const res = await fetch('/api/admin/status');
                 const data = await res.json();
                 if (data.success) {
-                    updateUI(data.state, data.simulation_mode);
+                    updateUI(data.state, data.simulation_mode, data.robot_enabled);
                 }
             } catch (e) { console.error(e); }
         }
 
-        function updateUI(s, simMode) {
+        function updateUI(s, simMode, robotEnabled) {
             document.getElementById('mode-badge').textContent = simMode ? '🔬 Simulazione' : '🤖 Robot Reale';
             document.getElementById('mode-badge').className = 'mode-badge ' + (simMode ? 'sim' : 'real');
             
@@ -294,6 +342,24 @@
             const currentActions = ua[s.current_hand] || [];
             document.getElementById('data-actions').textContent = currentActions.length > 0 ? `Mano ${s.current_hand}: ${currentActions.join(' → ')}` : '-';
             
+            // Nuovi dati
+            const modeLabels = { 'simulation': '🔬 Simulazione', 'real': '🤖 Reale', 'disabled': '🚫 Disabilitato' };
+            document.getElementById('data-robot-mode').textContent = modeLabels[s.robot_mode] || s.robot_mode || '-';
+            
+            document.getElementById('data-session-duration').textContent = s.session_duration_s != null ? formatDuration(s.session_duration_s) : '-';
+            document.getElementById('data-hand-duration').textContent = s.hand_duration_s != null ? formatDuration(s.hand_duration_s) : '-';
+            
+            document.getElementById('data-last-reaction').textContent = s.last_reaction_time_ms != null ? s.last_reaction_time_ms + ' ms' : '-';
+            document.getElementById('data-avg-reaction-hand').textContent = s.avg_reaction_hand_ms != null ? s.avg_reaction_hand_ms + ' ms' : '-';
+            document.getElementById('data-avg-reaction').textContent = s.avg_reaction_time_ms != null ? s.avg_reaction_time_ms + ' ms' : '-';
+            
+            const ac = s.action_count || {};
+            const acParts = [];
+            for (let h = 1; h <= 3; h++) {
+                if (ac[h] !== undefined && ac[h] > 0) acParts.push('M' + h + ': ' + ac[h]);
+            }
+            document.getElementById('data-action-counts').textContent = acParts.length > 0 ? acParts.join(' | ') : '-';
+            
             // Log changes
             if (lastState) {
                 if (s.last_action !== lastState.last_action && s.last_action) {
@@ -330,6 +396,31 @@
         }
 
         function updateRobotStatusUI(st) {
+            // Update robot enable/disable toggle
+            const toggleBar = document.getElementById('robot-toggle-bar');
+            const toggleLabel = document.getElementById('robot-toggle-label');
+            const toggleIcon = document.getElementById('robot-toggle-icon');
+            const toggleText = document.getElementById('robot-toggle-text');
+            const toggleHint = document.getElementById('robot-toggle-hint');
+            const toggleCheckbox = document.getElementById('robot-toggle-checkbox');
+            
+            if (st.robot_enabled !== undefined) {
+                toggleCheckbox.checked = st.robot_enabled;
+                if (st.robot_enabled) {
+                    toggleBar.className = 'robot-toggle-bar enabled';
+                    toggleLabel.className = 'robot-toggle-label enabled';
+                    toggleIcon.textContent = '🤖';
+                    toggleText.textContent = 'Robot ATTIVO';
+                    toggleHint.textContent = 'Animazioni e parlato abilitati';
+                } else {
+                    toggleBar.className = 'robot-toggle-bar disabled';
+                    toggleLabel.className = 'robot-toggle-label disabled';
+                    toggleIcon.textContent = '🚫';
+                    toggleText.textContent = 'Robot DISATTIVATO';
+                    toggleHint.textContent = 'Il gioco prosegue senza animazioni';
+                }
+            }
+
             const dot = document.getElementById('robot-status-dot');
             const text = document.getElementById('robot-status-text');
             const details = document.getElementById('robot-details');
@@ -415,6 +506,22 @@
         function startExperiment() {
             const pid = document.getElementById('participant-id').value;
             sendAction('start_experiment', { participant_id: pid });
+        }
+
+        async function toggleRobot() {
+            try {
+                const res = await fetch('/api/admin/toggle_robot', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    const label = data.robot_enabled ? '🤖 Robot ATTIVATO' : '🚫 Robot DISATTIVATO';
+                    addLog(label, 'system');
+                    // Immediate UI update
+                    fetchRobotStatus();
+                }
+            } catch (e) {
+                console.error('Errore toggle robot:', e);
+                addLog('❌ Errore toggle robot', 'system');
+            }
         }
 
         function startHand(n) { sendAction('start_hand', { hand_number: n }); }

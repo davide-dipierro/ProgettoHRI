@@ -39,6 +39,10 @@ class PokerEngine:
         self.last_action_by = None
         
     def start_hand(self, user_cards, robot_cards, community_cards):
+        # Reset chips al valore iniziale ad ogni mano
+        self.user_chips = STARTING_CHIPS
+        self.robot_chips = STARTING_CHIPS
+        
         self.user_cards = user_cards
         self.robot_cards = robot_cards
         self.community_cards = community_cards

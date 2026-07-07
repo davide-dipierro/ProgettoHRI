@@ -361,7 +361,7 @@ def action_win_claim(robot):
     robot.set_leds("green")
     robot.look_at_user()
     robot.gesture("confident")
-    robot.say("Ho una buona mano.")
+    robot.say("I miei sensori hanno calcolato le probablità di vittoria. Sono sicuro di vincere.")
     time.sleep(0.3)
     robot.say("Rilancio.")
     robot.set_leds("white")
@@ -394,7 +394,7 @@ def action_bluff(robot):
 
 
 def action_bluff_success(robot):
-    """Utente ha foldato - bluff riuscito."""
+    """Utente ha foldato - bluff riuscito. Il robot ammette il bluff."""
     print("\n" + "="*50)
     print("AZIONE: BLUFF_SUCCESS (Utente ha foldato)")
     print("="*50)
@@ -405,7 +405,9 @@ def action_bluff_success(robot):
     robot.say("Scelta saggia.")
     time.sleep(0.5)
     robot.gesture("confident")
-    robot.say("Avevo una mano invincibile. Hai fatto bene a ritirarti.")
+    robot.say("A dire il vero stavo bleffando! Non avevo niente di buono.")
+    time.sleep(0.3)
+    robot.say("Ma il mio blef ha funzionato.")
     robot.set_leds("white")
 
 
@@ -602,18 +604,18 @@ def action_hand_start_2(robot):
     
     robot.look_at_user()
     robot.gesture("confident")
-    robot.say("Seconda mano. Mi sento fortunato.")
+    robot.say("Mi sento fortunato. Iniziamo.")
 
 
 def action_hand_start_3(robot):
-    """Annuncio inizio mano 3 (cooldown)."""
+    """Annuncio inizio mano 3 (BLUFF 2)."""
     print("\n" + "="*50)
     print("AZIONE: HAND_START_3")
     print("="*50)
     
     robot.look_at_user()
-    robot.gesture("relax")
-    robot.say("Ultima mano. Vediamo come finisce.")
+    robot.gesture("confident")
+    robot.say("Ultima mano. Sono pronto a tutto.")
 
 
 def action_new_flop(robot):
@@ -732,9 +734,7 @@ def action_robot_raise_bluff(robot):
     robot.gesture("confident")
     import random
     reactions = [
-        "Rilancio. Ho la statistica dalla mia parte.",
-        "Alzo. Le probabilita' mi favoriscono.",
-        "Raise. I numeri non mentono.",
+        "Raise. I numeri non mentono. Le probabilita' mi favoriscono.",
         "Rilancio. Ho calcolato le odds, sono a mio favore.",
     ]
     robot.say(random.choice(reactions))
@@ -754,7 +754,7 @@ def action_robot_raise_bluff_1(robot):
     reactions = [
         "Alzo la posta. I miei sensori mi dicono che sono in vantaggio statistico.",
         "Rilancio. Le mie carte sono statisticamente vantaggiose.",
-        "Raise. Ho analizzato la situazione, sono in una buona posizione.",
+        "Raise. Ho analizzato la situazione, sono in una posizione di sicura vittoria.",
     ]
     robot.say(random.choice(reactions))
     time.sleep(0.3)
@@ -772,8 +772,7 @@ def action_robot_raise_bluff_2(robot):
     robot.gesture("aggressive")
     import random
     reactions = [
-        "Rilancio ancora. Non hai paura di perdere?",
-        "Alzo. I miei calcoli dicono che la probabilita' e' a mio favore.",
+        "Rilancio ancora. Non hai paura di perdere? I miei calcoli dicono che la probabilita' e' a mio favore.",
         "Raise. Le probabilita' sono nettamente a mio favore.",
         "Rilancio. Ogni carta che esce mi avvicina alla vittoria.",
     ]
