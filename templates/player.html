@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Poker vs Robot</title>
     <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
+
 <body>
     <div class="container">
         <header class="header">
             <h1>🎰 <span class="gradient-text">Poker vs Robot</span> 🤖</h1>
         </header>
-        
+
         <main id="game-area">
             <div class="waiting-screen">
                 <h2>In attesa dell'inizio...</h2>
@@ -73,38 +75,38 @@
         let lastStateJSON = '';
         let isQuestionnaireShown = false;
         let isRaiseOpen = false;
-        
+
         async function fetchStatus() {
             try {
                 const res = await fetch('/api/player/status');
                 const data = await res.json();
                 if (data.success) {
                     const newStateJSON = JSON.stringify(data.state);
-                    
+
                     // Non aggiornare se il questionario è già visualizzato
                     if (data.state.phase === 'questionnaire' && isQuestionnaireShown) {
                         return data;
                     }
-                    
+
                     // Non aggiornare se il raise control è aperto
                     if (isRaiseOpen && !data.state.hand_over) {
                         // Aggiorna solo le info essenziali senza riscrivere tutto
                         return data;
                     }
-                    
+
                     // Non aggiornare se lo stato non è cambiato
                     if (newStateJSON === lastStateJSON) {
                         return data;
                     }
-                    
+
                     lastStateJSON = newStateJSON;
-                    
+
                     if (data.state.phase === 'questionnaire') {
                         isQuestionnaireShown = true;
                     } else {
                         isQuestionnaireShown = false;
                     }
-                    
+
                     updateUI(data.state);
                 }
                 return data;
@@ -118,7 +120,7 @@
             // Reset raise state quando si invia un'azione
             isRaiseOpen = false;
             lastStateJSON = ''; // Forza aggiornamento UI dopo azione
-            
+
             try {
                 const res = await fetch('/api/player/action', {
                     method: 'POST',
@@ -143,7 +145,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ questionnaire: { mode: 'google_form_completed' } })
             });
-            
+
             // Reset per permettere aggiornamento a fase end
             isQuestionnaireShown = false;
             lastStateJSON = '';
@@ -155,7 +157,7 @@
         // =================================================================
         function updateUI(s) {
             const gameArea = document.getElementById('game-area');
-            
+
             if (s.phase === 'waiting') {
                 gameArea.innerHTML = `
                     <div class="waiting-screen">
@@ -166,12 +168,12 @@
                 `;
                 return;
             }
-            
+
             if (s.phase === 'questionnaire') {
                 gameArea.innerHTML = renderQuestionnaire();
                 return;
             }
-            
+
             if (s.phase === 'end') {
                 gameArea.innerHTML = `
                     <div class="end-screen">
@@ -181,25 +183,35 @@
                 `;
                 return;
             }
-            
+
             // Gioco attivo
             const isMyTurn = s.is_my_turn;
             const canCheck = s.can_check;
             const callAmount = s.call_amount;
             const opponentThinking = s.opponent_thinking;
             const robotInteracting = s.robot_interacting;
-            
+
             let handResultHtml = '';
             if (s.hand_over) {
-                const isWin = s.winner === 'user';
-                handResultHtml = `
-                    <div class="hand-result ${isWin ? 'win' : 'lose'}">
-                        <h3>${isWin ? '🎉 Hai vinto la mano!' : '😔 Il robot vince la mano'}</h3>
-                        <p>In attesa della prossima mano...</p>
-                    </div>
-                `;
+                if (robotInteracting) {
+                    // Robot sta ancora parlando/gesticolando - non spoilerare il risultato
+                    handResultHtml = `
+                        <div class="hand-result" style="background: rgba(255,255,255,0.05); border-color: #555;">
+                            <h3>🤖 Il robot sta reagendo...</h3>
+                            <p>Attendi che il robot finisca</p>
+                        </div>
+                    `;
+                } else {
+                    const isWin = s.winner === 'user';
+                    handResultHtml = `
+                        <div class="hand-result ${isWin ? 'win' : 'lose'}">
+                            <h3>${isWin ? '🎉 Hai vinto la mano!' : '😔 Il robot vince la mano'}</h3>
+                            <p>In attesa della prossima mano...</p>
+                        </div>
+                    `;
+                }
             }
-            
+
             gameArea.innerHTML = `
                 <!-- Chips -->
                 <div class="chips-display">
@@ -294,7 +306,7 @@
                     ` : ''}
                 ` : ''}
             `;
-            
+
             state.lastState = s;
         }
 
@@ -349,4 +361,5 @@
         window.onload = startPolling;
     </script>
 </body>
+
 </html>
