@@ -18,6 +18,7 @@ class ExperimentManager:
     PHASE_END = "end"
 
     def __init__(self):
+        self.robot_mode = "simulation"  # "simulation" / "real" / "disabled"
         self.reset()
 
     def reset(self):
@@ -27,6 +28,7 @@ class ExperimentManager:
         self.participant_id = None
         self.user_actions = {1: [], 2: [], 3: []}
         self.user_decision_on_bluff = None
+        self.winners = {1: None, 2: None, 3: None}
         
         # --- Timing ---
         self.session_start_time = None
@@ -35,7 +37,6 @@ class ExperimentManager:
         self.turn_start_time = None
         self.reaction_times = {1: [], 2: [], 3: []}  # {hand: [(street, ms), ...]}
         self.action_count = {1: 0, 2: 0, 3: 0}
-        self.robot_mode = "simulation"  # "simulation" / "real" / "disabled"
         
         self.hands = {
             1: {  # Establishment: Utente vince (tris di 10)

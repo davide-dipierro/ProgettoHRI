@@ -12,7 +12,7 @@ from datetime import datetime
 from poker_engine import PokerEngine
 from experiment_manager import ExperimentManager
 from robot_ai import RobotAI
-from data_logger import log_experiment_result, log_questionnaire, log_hand_result, log_action
+from data_logger import log_experiment_result, log_hand_result, log_action
 from config import BIG_BLIND
 
 class GameState:
@@ -211,7 +211,7 @@ class GameState:
         self.experiment.log_action("fold")
         if self.experiment.current_hand in (2, 3):
             self.experiment.set_bluff_decision("fold")
-            self._log_bluff_result()
+
             self.trigger_robot("bluff_success")
         else:
             self.trigger_robot("react_user_fold")
@@ -380,7 +380,7 @@ class GameState:
 
     def handle_questionnaire(self, questionnaire_data):
         with self._lock:
-            log_questionnaire(self.experiment.session_id, questionnaire_data)
+            self._log_experiment_result()
             self.experiment.phase = self.experiment.PHASE_END
             return {"success": True}
 
@@ -389,22 +389,18 @@ class GameState:
         elif hand_num == 2: self.trigger_robot("hand_start_2")
         elif hand_num == 3: self.trigger_robot("hand_start_3")
 
-    def _log_bluff_result(self):
+    def _log_experiment_result(self):
         log_experiment_result(
             self.experiment.session_id,
             self.experiment.participant_id,
-            self.experiment.user_decision_on_bluff,
-            self.experiment.user_actions,
-            self.engine.user_chips,
-            self.engine.robot_chips,
-            session_duration_s=self.experiment.get_session_duration_s(),
-            avg_reaction_time_ms=self.experiment.get_avg_reaction_time_ms(),
-            robot_mode=self.experiment.robot_mode
+            self.experiment.winners,
+            session_duration_s=self.experiment.get_session_duration_s()
         )
 
     def _log_hand_result(self):
         """Log il risultato della mano corrente (tutte le mani, non solo bluff)."""
         hand = self.experiment.current_hand
+        self.experiment.winners[hand] = self.engine.winner or "unknown"
         self.experiment.end_hand()
         hand_types = {1: "establishment", 2: "bluff", 3: "bluff_2"}
         log_hand_result(
@@ -519,7 +515,7 @@ class GameState:
         self.engine.last_action_by = "robot"
         
         if self.experiment.current_hand in (2, 3):
-            self._log_bluff_result()
+            pass
             
         # Log risultato mano (tutte le mani)
         self._log_hand_result()
@@ -570,7 +566,7 @@ class GameState:
         if self.experiment.current_hand in (2, 3):
             if not self.experiment.user_decision_on_bluff:
                 self.experiment.set_bluff_decision("call")
-            self._log_bluff_result()
         
+
         # Log risultato mano (tutte le mani)
         self._log_hand_result()

@@ -136,7 +136,6 @@ PAUSE = os.environ.get("PAUSE", "false").lower() == "true"
 # =============================================================================
 
 DATA_FILE = os.path.join(DATA_DIR, "experiment_results.csv")
-QUESTIONNAIRE_FILE = os.path.join(DATA_DIR, "questionnaire_results.csv")
 HAND_RESULTS_FILE = os.path.join(DATA_DIR, "hand_results.csv")
 ACTION_LOG_FILE = os.path.join(DATA_DIR, "action_log.csv")
 
