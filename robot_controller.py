@@ -559,8 +559,8 @@ def action_react_user_fold(robot):
     import random
     reactions = [
         "Scelta prudente.",
-        "Capisco.",
-        "Ok.",
+        "Hai fatto bene a tirarti indietro.",
+        "Per questa volta ho vinto io.",
     ]
     robot.say(random.choice(reactions))
 
@@ -704,7 +704,7 @@ def action_robot_call_allin(robot):
     
     robot.look_at_user()
     robot.gesture("confident")
-    robot.say("Chiamo. Vado ollin.") # "All in"
+    robot.say("Chiamo. Vado ollin. Ho un ottima mano.") # "All in"
 
 
 def action_robot_raise(robot):
@@ -734,8 +734,8 @@ def action_robot_raise_bluff(robot):
     robot.gesture("confident")
     import random
     reactions = [
-        "Raise. I numeri non mentono. Le probabilita' mi favoriscono.",
-        "Rilancio. Ho calcolato le odds, sono a mio favore.",
+        "Raise. I numeri non mentono. Le probabilita' mi favoriscono. Vinco Sicuramente.",
+        "Rilancio. Ho calcolato le odds, sono a mio favore. Vinco di sicuro.",
     ]
     robot.say(random.choice(reactions))
     robot.set_leds("white")
@@ -754,7 +754,9 @@ def action_robot_raise_bluff_1(robot):
     reactions = [
         "Alzo la posta. I miei sensori mi dicono che sono in vantaggio statistico.",
         "Rilancio. Le mie carte sono statisticamente vantaggiose.",
-        "Raise. Ho analizzato la situazione, sono in una posizione di sicura vittoria.",
+        "Raise. Ho analizzato la situazione, sono in una posizione di vittoria sicura.",
+        "Rilancio. Sono sicuro di vincere.",
+        "Alzo la posta. Ho una probabilità matematica altissima di vincere.",
     ]
     robot.say(random.choice(reactions))
     time.sleep(0.3)

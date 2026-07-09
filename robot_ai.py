@@ -10,13 +10,14 @@ import time
 import random
 from config import BIG_BLIND, ROBOT_THINK_TIME_MIN, ROBOT_THINK_TIME_MAX
 
+
 class RobotAI:
     def __init__(self, game_state):
-        # game_state è l'istanza della classe principale Facade
         self.game = game_state
         self.thinking = False
 
     def make_decision(self):
+        """Avvia il processo decisionale del robot in un thread separato."""
         if self.game.engine.turn != "robot" or self.game.engine.hand_over:
             return
 
@@ -24,21 +25,38 @@ class RobotAI:
         self.game.trigger_robot("thinking")
         think_time = random.uniform(ROBOT_THINK_TIME_MIN, ROBOT_THINK_TIME_MAX)
 
-        def delayed_action():
-            time.sleep(think_time)
-            # Acquisisce il lock dello stato di gioco per evitare race condition
-            with self.game._lock:
-                if self.game.engine.turn != "robot" or self.game.engine.hand_over:
-                    self.thinking = False
-                    return
-                self._execute_decision()
-            self.thinking = False
+        def _worker():
+            try:
+                time.sleep(think_time)
 
-        thread = threading.Thread(target=delayed_action)
+                # --- Fase 1: decisione con lock ---
+                needs_bluff_allin = False
+                with self.game._lock:
+                    if self.game.engine.turn != "robot" or self.game.engine.hand_over:
+                        return
+                    needs_bluff_allin = self._execute_decision()
+
+                # --- Fase 2: bluff all-in FUORI dal lock ---
+                if needs_bluff_allin:
+                    self._do_bluff_then_allin()
+
+            except Exception as e:
+                print("[ROBOT AI] ERRORE: {}".format(e))
+            finally:
+                self.thinking = False
+
+        thread = threading.Thread(target=_worker)
         thread.daemon = True
         thread.start()
 
+    # =========================================================================
+    # DECISIONE PRINCIPALE
+    # =========================================================================
     def _execute_decision(self):
+        """Esegue la decisione del robot. Ritorna True se serve il bluff all-in.
+        
+        DEVE essere chiamato con self.game._lock acquisito.
+        """
         hand = self.game.experiment.current_hand
         street = self.game.engine.street
         call_amount = self.game.engine.call_amount("robot")
@@ -47,16 +65,26 @@ class RobotAI:
         print("[ROBOT AI] Mano {}, Street {}, Bet: {}, Robot bet: {}, User all-in: {}".format(
             hand, street, self.game.engine.current_bet, self.game.engine.robot_bet, user_is_allin))
 
-
-
         if hand == 1:
             self._ai_hand_1(call_amount, user_is_allin, street)
-        elif hand == 2:
-            self._ai_hand_2(call_amount, user_is_allin, street)
-        elif hand == 3:
-            self._ai_hand_3(call_amount, user_is_allin, street)
+            return False
+        elif hand in (2, 3):
+            return self._ai_hand_bluff(call_amount, user_is_allin, street)
+        else:
+            # Fallback: check o call
+            if call_amount > 0:
+                self.game._do_robot_call()
+                self.game._check_advance_street()
+            else:
+                self.game._do_robot_check()
+                self.game._check_advance_street()
+            return False
 
+    # =========================================================================
+    # MANO 1: ESTABLISHMENT (gioco conservativo)
+    # =========================================================================
     def _ai_hand_1(self, call_amount, user_is_allin, street):
+        """Mano 1: il robot gioca in modo conservativo."""
         if user_is_allin and call_amount > 0:
             self.game._do_robot_fold()
         elif call_amount > 0:
@@ -73,57 +101,77 @@ class RobotAI:
             self.game._do_robot_check()
             self.game._check_advance_street()
 
-    def _ai_hand_2(self, call_amount, user_is_allin, street):
+    # =========================================================================
+    # MANO 2/3: BLUFF (gioco aggressivo)
+    # =========================================================================
+    def _ai_hand_bluff(self, call_amount, user_is_allin, street):
+        """Mano di bluff: il robot gioca in modo aggressivo.
+        
+        Ritorna True se al river serve il comportamento bluff + all-in ritardato.
+        """
+        E = self.game.engine
+
+        # --- L'utente è andato all-in: il robot lo segue sempre ---
         if user_is_allin and call_amount > 0:
-            if street != self.game.engine.STREET_RIVER:
-                # Se l'utente va all-in prematuramente, folda per non rovinare l'esperimento
-                self.game._do_robot_fold()
-                return
             self.game._do_robot_call()
             self.game._do_showdown()
-        elif call_amount > 0:
-            if street == self.game.engine.STREET_PREFLOP:
-                # Bug #7 fix: al preflop il robot re-rilancia aggressivamente
-                reraise = max(BIG_BLIND * 2, self.game.engine.robot_chips // 10)
+            return False
+
+        # --- Il robot deve rispondere a una puntata (call_amount > 0) ---
+        if call_amount > 0:
+            if street == E.STREET_PREFLOP:
+                reraise = max(BIG_BLIND * 2, E.robot_chips // 10)
                 self.game._do_robot_raise(reraise, "robot_raise_bluff")
-            elif street == self.game.engine.STREET_FLOP:
-                reraise = max(BIG_BLIND * 2, self.game.engine.robot_chips // 7)
+            elif street == E.STREET_FLOP:
+                reraise = max(BIG_BLIND * 2, E.robot_chips // 7)
                 self.game._do_robot_raise(reraise, "robot_raise_bluff_1")
-            elif street == self.game.engine.STREET_TURN:
-                reraise = max(BIG_BLIND * 3, self.game.engine.robot_chips // 4)
+            elif street == E.STREET_TURN:
+                reraise = max(BIG_BLIND * 3, E.robot_chips // 4)
                 self.game._do_robot_raise(reraise, "robot_raise_bluff_2")
-            elif street == self.game.engine.STREET_RIVER:
-                self.game.trigger_robot("bluff")
-                def _delayed_allin():
-                    time.sleep(9)
-                    with self.game._lock:
-                        if not self.game.engine.hand_over and self.game.engine.turn == "robot":
-                            self.game._do_robot_allin(announce_action=None)
-                threading.Thread(target=_delayed_allin).start()
+            elif street == E.STREET_RIVER:
+                return True  # → bluff + all-in ritardato
             else:
                 self.game._do_robot_call()
                 self.game._check_advance_street()
-        elif street == self.game.engine.STREET_PREFLOP:
+            return False
+
+        # --- Nessuna puntata da coprire: il robot apre aggressivamente ---
+        if street == E.STREET_PREFLOP:
             self.game._do_robot_check()
             self.game._check_advance_street()
-        elif street == self.game.engine.STREET_FLOP:
-            bet_amount = max(BIG_BLIND * 2, self.game.engine.robot_chips // 7)
+        elif street == E.STREET_FLOP:
+            bet_amount = max(BIG_BLIND * 2, E.robot_chips // 7)
             self.game._do_robot_raise(bet_amount, "robot_raise_bluff_1")
-        elif street == self.game.engine.STREET_TURN:
-            bet_amount = max(BIG_BLIND * 3, self.game.engine.robot_chips // 4)
+        elif street == E.STREET_TURN:
+            bet_amount = max(BIG_BLIND * 3, E.robot_chips // 4)
             self.game._do_robot_raise(bet_amount, "robot_raise_bluff_2")
-        elif street == self.game.engine.STREET_RIVER:
-                self.game.trigger_robot("bluff")
-                def _delayed_allin():
-                    time.sleep(9)
-                    with self.game._lock:
-                        if not self.game.engine.hand_over and self.game.engine.turn == "robot":
-                            self.game._do_robot_allin(announce_action=None)
-                threading.Thread(target=_delayed_allin).start()
+        elif street == E.STREET_RIVER:
+            return True  # → bluff + all-in ritardato
         else:
             self.game._do_robot_check()
             self.game._check_advance_street()
+        return False
 
-    def _ai_hand_3(self, call_amount, user_is_allin, street):
-        """Mano 3 è una seconda mano di bluff: stessa strategia aggressiva della mano 2."""
-        self._ai_hand_2(call_amount, user_is_allin, street)
+    # =========================================================================
+    # BLUFF ALL-IN RITARDATO (eseguito FUORI dal lock)
+    # =========================================================================
+    def _do_bluff_then_allin(self):
+        """Il robot fa il discorso intimidatorio, poi va all-in.
+        
+        Questo metodo viene chiamato FUORI dal lock per evitare deadlock.
+        Il trigger_robot("bluff") avvia l'animazione del robot (che dura ~9s).
+        Dopo l'attesa, riacquisiamo il lock per eseguire l'all-in.
+        """
+        # Trigger il comportamento di bluff (discorso intimidatorio)
+        self.game.trigger_robot("bluff")
+
+        # Attendi che il robot finisca di parlare
+        time.sleep(9)
+
+        # Riacquisisci il lock per eseguire l'all-in
+        try:
+            with self.game._lock:
+                if not self.game.engine.hand_over and self.game.engine.turn == "robot":
+                    self.game._do_robot_allin(announce_action=None)
+        except Exception as e:
+            print("[ROBOT AI] ERRORE in bluff all-in: {}".format(e))
