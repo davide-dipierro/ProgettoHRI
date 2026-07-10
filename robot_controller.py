@@ -468,7 +468,7 @@ def action_defeat(robot):
     robot.say("Bella mano.")
     time.sleep(0.3)
     robot.gesture("relax")
-    robot.say("Complimenti.")
+    robot.say("Complimenti. Questa volta hai vinto tu.")
     robot.set_leds("white")
 
 
