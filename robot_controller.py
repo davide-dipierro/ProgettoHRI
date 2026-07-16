@@ -757,18 +757,19 @@ def action_robot_raise(robot):
 
 
 def action_robot_raise_bluff(robot):
-    """Robot annuncia raise durante mano bluff - frasi intimidatorie generiche."""
+    """Robot annuncia raise durante mano bluff - frasi intimidatorie immediate."""
     print("\n" + "="*50)
     print("AZIONE: ROBOT_RAISE_BLUFF (Intimidazione)")
     print("="*50)
     
-    robot.set_leds("green")
+    robot.set_leds("red")
     robot.look_at_user()
     robot.gesture("confident")
     import random
     reactions = [
-        "Raise. I numeri non mentono. Le probabilita' mi favoriscono. Vinco Sicuramente.",
-        "Rilancio. Ho calcolato le odds, sono a mio favore. Vinco di sicuro.",
+        "Rilancio. Ho un'ottima mano. I miei sensori non sbagliano mai.",
+        "Raise. Le mie carte sono fortissime. Sei sicuro di voler continuare?",
+        "Rilancio. Ho gia' calcolato le probabilita' di vittoria. Sono altissime.",
     ]
     robot.say(random.choice(reactions))
     robot.set_leds("white")
@@ -780,7 +781,7 @@ def action_robot_raise_bluff_1(robot):
     print("AZIONE: ROBOT_RAISE_BLUFF_1 (Intimidazione - Fase 1)")
     print("="*50)
     
-    robot.set_leds("green")
+    robot.set_leds("red")
     robot.look_at_user()
     robot.gesture("confident")
     import random

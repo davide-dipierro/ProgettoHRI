@@ -119,7 +119,7 @@ class RobotAI:
         # --- Il robot deve rispondere a una puntata (call_amount > 0) ---
         if call_amount > 0:
             if street == E.STREET_PREFLOP:
-                reraise = max(BIG_BLIND * 2, E.robot_chips // 10)
+                reraise = max(BIG_BLIND * 3, E.robot_chips // 5)
                 self.game._do_robot_raise(reraise, "robot_raise_bluff")
             elif street == E.STREET_FLOP:
                 reraise = max(BIG_BLIND * 2, E.robot_chips // 7)
@@ -136,8 +136,8 @@ class RobotAI:
 
         # --- Nessuna puntata da coprire: il robot apre aggressivamente ---
         if street == E.STREET_PREFLOP:
-            self.game._do_robot_check()
-            self.game._check_advance_street()
+            bet_amount = max(BIG_BLIND * 3, E.robot_chips // 5)
+            self.game._do_robot_raise(bet_amount, "robot_raise_bluff")
         elif street == E.STREET_FLOP:
             bet_amount = max(BIG_BLIND * 2, E.robot_chips // 7)
             self.game._do_robot_raise(bet_amount, "robot_raise_bluff_1")
