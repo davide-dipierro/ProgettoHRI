@@ -237,7 +237,7 @@
                             <span class="player-label robot">🤖 Robot</span>
                             ${s.robot_bet > 0 ? `<span class="bet-indicator">Puntata: ${s.robot_bet}</span>` : ''}
                             <div class="cards-container">
-                                ${renderCards(['back', 'back'], true)}
+                                ${s.show_opponent_cards && !robotInteracting && s.opponent_cards && s.opponent_cards.length > 0 ? renderCards(s.opponent_cards) : renderCards(['back', 'back'], true)}
                             </div>
                         </div>
                         

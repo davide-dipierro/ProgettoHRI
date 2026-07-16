@@ -207,6 +207,7 @@ class GameState:
         self.engine.pot = 0
         self.engine.last_action = "fold"
         self.engine.last_action_by = "user"
+        self.engine.show_robot_cards = True
         
         self.experiment.log_action("fold")
         if self.experiment.current_hand in (2, 3):
@@ -513,6 +514,7 @@ class GameState:
         self.engine.pot = 0
         self.engine.last_action = "fold"
         self.engine.last_action_by = "robot"
+        self.engine.show_robot_cards = True
         
         if self.experiment.current_hand in (2, 3):
             pass

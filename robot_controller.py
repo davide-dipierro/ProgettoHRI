@@ -455,8 +455,6 @@ def action_bluff_failed(robot):
     robot.set_leds("blue")
     robot.gesture("shock")
     robot.gesture("shake_head")
-    robot.say("Impossibile!")
-    time.sleep(0.3)
     robot.say("Ho mentito non avevo una bella mano... Pensavo di spaventarti!")
     time.sleep(0.5)
     robot.gesture("relax")
