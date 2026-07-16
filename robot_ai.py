@@ -111,10 +111,9 @@ class RobotAI:
         """
         E = self.game.engine
 
-        # --- L'utente è andato all-in: il robot lo segue sempre ---
+        # --- L'utente è andato all-in: il robot si ritira (ammette il bluff) ---
         if user_is_allin and call_amount > 0:
-            self.game._do_robot_call()
-            self.game._do_showdown()
+            self.game._do_robot_fold()
             return False
 
         # --- Il robot deve rispondere a una puntata (call_amount > 0) ---

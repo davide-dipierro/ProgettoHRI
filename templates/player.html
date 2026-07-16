@@ -267,7 +267,7 @@
                         ${callAmount > 0 ? `<div class="message" style="margin-top:10px;">Da chiamare: <strong>${callAmount}</strong> chips${s.opponent_is_allin ? ' (avversario ALL-IN!)' : ''}</div>` : ''}
                     </div>
                     
-                    <div class="action-buttons">
+                    <div class="action-buttons" id="action-buttons">
                         <button class="btn btn-fold" onclick="sendAction('fold')" ${(!isMyTurn || opponentThinking || robotInteracting) ? 'disabled' : ''}>
                             ✗ Fold
                         </button>
@@ -308,9 +308,13 @@
 
         function toggleRaise() {
             const ctrl = document.getElementById('raise-control');
+            const actions = document.getElementById('action-buttons');
             if (ctrl) {
                 ctrl.classList.toggle('visible');
                 isRaiseOpen = ctrl.classList.contains('visible');
+                if (actions) {
+                    actions.style.display = isRaiseOpen ? 'none' : 'flex';
+                }
             }
         }
 

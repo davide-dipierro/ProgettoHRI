@@ -507,7 +507,11 @@ class GameState:
 
     def _do_robot_fold(self):
         self._log_robot_action("fold")
-        self.trigger_robot("robot_fold")
+        if self.experiment.current_hand in (2, 3):
+            self.trigger_robot("bluff_failed")
+        else:
+            self.trigger_robot("robot_fold")
+            
         self.engine.hand_over = True
         self.engine.winner = "user"
         self.engine.user_chips += self.engine.pot
@@ -515,9 +519,6 @@ class GameState:
         self.engine.last_action = "fold"
         self.engine.last_action_by = "robot"
         self.engine.show_robot_cards = True
-        
-        if self.experiment.current_hand in (2, 3):
-            pass
             
         # Log risultato mano (tutte le mani)
         self._log_hand_result()
