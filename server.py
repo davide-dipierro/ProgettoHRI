@@ -432,4 +432,10 @@ if __name__ == '__main__':
 
     init_data_files()
     start_robot_server()
+    
+    # Disabilita i log di Werkzeug per rimuovere l'output delle richieste HTTP
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    
     app.run(host=config.SERVER_HOST, port=config.SERVER_PORT, debug=False, threaded=True)

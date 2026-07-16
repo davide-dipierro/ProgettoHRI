@@ -128,6 +128,7 @@ class NAORobot:
             raise Exception(msg)
         
         self.tts = self.session.service("ALTextToSpeech")
+        self.animated_speech = self.session.service("ALAnimatedSpeech")
         self.motion = self.session.service("ALMotion")
         self.posture = self.session.service("ALRobotPosture")
         self.leds = self.session.service("ALLeds")
@@ -135,6 +136,30 @@ class NAORobot:
         # Configura voce
         self.tts.setParameter("speed", 75)
         self.tts.setLanguage("Italian")
+        
+        # Configurazione ALAnimatedSpeech: passiamo bodyLanguageMode
+        # esplicitamente ad ogni chiamata say() per massima affidabilita'.
+        # "contextual" = gesti automatici basati sul contenuto del testo.
+        self._animated_speech_config = {"bodyLanguageMode": "contextual"}
+        
+        # --- ABILITAZIONE SPEAKING MOVEMENTS ---
+        # Su NAOqi 2.4+ (Choregraphe 2.8), ALAnimatedSpeech delega i
+        # movimenti del corpo ad ALSpeakingMovement. Se questo servizio
+        # e' disabilitato (default senza Autonomous Life), il robot
+        # parla ma NON si muove. Dobbiamo abilitarlo esplicitamente.
+        try:
+            self.speaking_movement = self.session.service("ALSpeakingMovement")
+            self.speaking_movement.setEnabled(True)
+            self.speaking_movement.setMode("contextual")
+            print("[NAO] ALSpeakingMovement abilitato (mode=contextual)")
+        except Exception as e:
+            print("[NAO WARN] ALSpeakingMovement non disponibile: {}".format(e))
+            print("[NAO WARN] Provo con setBodyLanguageMode su ALAnimatedSpeech...")
+            try:
+                self.animated_speech.setBodyLanguageMode(2)  # 2 = contextual
+                print("[NAO] setBodyLanguageMode(2) impostato")
+            except Exception as e2:
+                print("[NAO WARN] setBodyLanguageMode fallito: {}".format(e2))
         
         # --- SICUREZZA ---
         # Invece di dare rigidità bruta, usiamo wakeUp(). 
@@ -151,9 +176,19 @@ class NAORobot:
         print("[NAO] Connesso e pronto a {}:{}".format(ip, port))
     
     def say(self, text):
-        """Fa parlare il robot."""
-        print("[NAO Say]: {}".format(text))
-        self.tts.say(text)
+        """Fa parlare il robot con animazioni contestuali.
+        
+        Usa ALAnimatedSpeech.say(text, config) passando esplicitamente
+        bodyLanguageMode="contextual" per generare movimenti di braccia,
+        testa e corpo durante la parlata. In caso di errore, usa
+        ALTextToSpeech come fallback.
+        """
+        print("[NAO Say (animated)]: {}".format(text))
+        try:
+            self.animated_speech.say(text, self._animated_speech_config)
+        except Exception as e:
+            print("[NAO WARN] ALAnimatedSpeech fallita: {}, uso ALTextToSpeech".format(e))
+            self.tts.say(text)
         time.sleep(0.5)  # Aggiunta pausa per non passare subito alla frase successiva
 
     
@@ -280,14 +315,14 @@ class NAORobot:
             self.motion.angleInterpolation(
                 ["HeadPitch", "LShoulderPitch", "RShoulderPitch"],
                 [-0.025, 0.9, 0.9],
-                [1.5, 2.0, 2.0],
+                [0.6, 0.8, 0.8],
                 True
             )
-            time.sleep(1.0)
-            self.set_leds("white")
-            # Ritorno lento (solo braccia e testa)
-            self._reset_upper_body()
             time.sleep(0.5)
+            self.set_leds("white")
+            # Ritorno rapido (solo braccia e testa)
+            self._reset_upper_body(0.8)
+            time.sleep(0.3)
             
         elif name == "relax":
             self._reset_upper_body()
@@ -386,7 +421,7 @@ def action_bluff(robot):
     time.sleep(1.5)
     robot.say("Ho calcolato tutte le probabilita'.")
     time.sleep(0.8)
-    robot.say("La statistica e' dalla mia parte. Ho il novantadue percento di vincere.")
+    robot.say("La statistica e' dalla mia parte. Ho il novantadue percento di probabilità di vincere.")
     time.sleep(0.5)
     robot.say("Pensaci bene prima di chiamare. Potresti perdere tutto.")
     
