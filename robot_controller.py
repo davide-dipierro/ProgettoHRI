@@ -245,7 +245,7 @@ class NAORobot:
             self.motion.angleInterpolation(
                 ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RWristYaw"],
                 [0.5, -0.2, 1.0, 0.0],
-                [1.5, 1.5, 1.5, 1.5],
+                [0.8, 0.8, 0.8, 0.8],
                 True
             )
             time.sleep(0.3)
@@ -285,11 +285,11 @@ class NAORobot:
             self.motion.angleInterpolation(
                 ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll"],
                 [0.5, -0.2, 1.0, 1.0],
-                [1.5, 1.5, 1.5, 1.5], # Più lento = più stabile
+                [0.8, 0.8, 0.8, 0.8], # Velocizzato per maggiore reattività
                 True
             )
-            time.sleep(1.0)
-            self._reset_upper_body()
+            time.sleep(0.3)
+            self._reset_upper_body(0.8)
             
         elif name == "aggressive":
             # --- SICUREZZA: solo braccio destro + testa ---
@@ -300,12 +300,12 @@ class NAORobot:
             
             names = ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "HeadPitch"]
             keys = [0.5, -0.15, 0.8, 0.15]
-            times = [1.5, 1.5, 1.5, 1.5]
+            times = [0.8, 0.8, 0.8, 0.8] # Velocizzato
             
             self.motion.angleInterpolation(names, keys, times, True)
-            time.sleep(0.8)
+            time.sleep(0.3)
             self.set_leds("white")
-            self._reset_upper_body()
+            self._reset_upper_body(0.8)
             time.sleep(0.5)  # Attesa stabilita' prima di proseguire
             
         elif name == "shock":
@@ -333,11 +333,11 @@ class NAORobot:
             self.motion.angleInterpolation(
                 ["LShoulderPitch", "RShoulderPitch", "LElbowRoll", "RElbowRoll"],
                 [0.3, 0.3, -0.5, 0.5],
-                [1.5, 1.5, 1.5, 1.5],
+                [0.8, 0.8, 0.8, 0.8], # Velocizzato
                 True
             )
-            time.sleep(0.8)
-            self._reset_upper_body()
+            time.sleep(0.3)
+            self._reset_upper_body(0.8)
             self.set_leds("white")
             
         elif name == "sad":
@@ -417,12 +417,12 @@ def action_bluff(robot):
     robot.look_at_user()
     
     # Frasi intimidatorie - pause drammatiche
-    robot.say("ollin.")
+    robot.say("Vado ollin.")
     time.sleep(1.5)
     robot.say("Ho calcolato tutte le probabilita'.")
-    time.sleep(0.8)
+    time.sleep(0.2)
     robot.say("La statistica e' dalla mia parte. Ho il novantadue percento di probabilità di vincere.")
-    time.sleep(0.5)
+    time.sleep(0.2)
     robot.say("Pensaci bene prima di chiamare. Potresti perdere tutto.")
     
     print("[INFO] Robot in attesa della decisione dell'utente...")
