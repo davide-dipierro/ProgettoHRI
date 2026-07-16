@@ -437,10 +437,10 @@ def action_bluff_success(robot):
     robot.set_leds("green")
     robot.gesture("relax")
     robot.gesture("nod")
-    robot.say("Scelta saggia.")
+    robot.say("Scelta saggia. Ho vinto io!")
     time.sleep(0.5)
     robot.gesture("confident")
-    robot.say("A dire il vero stavo bleffando! Non avevo niente di buono.")
+    robot.say("Ti svelo che stavo bleffando! Non avevo niente di buono.")
     time.sleep(0.3)
     robot.say("Ma il mio blef ha funzionato.")
     robot.set_leds("white")
@@ -455,7 +455,8 @@ def action_bluff_failed(robot):
     robot.set_leds("blue")
     #robot.gesture("shock")
     robot.gesture("shake_head")
-    robot.say("In realtà ho mentito, non avevo una bella mano... Pensavo di spaventarti!")
+    time.sleep(0.5)
+    robot.say("In realtà ho mentito, non avevo una bella mano... Pensavo di spaventarti! Questa volta ho perso.")
     time.sleep(0.5)
     robot.gesture("relax")
     robot.set_leds("white")
@@ -535,8 +536,7 @@ def action_react_user_call(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Interessante.",
-        "Vediamo.",
+        "Ok, vediamo le carte.",
         "Ok, andiamo avanti.",
     ]
     robot.say(random.choice(reactions))
@@ -660,11 +660,12 @@ def action_new_flop(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Analizzo le prime tre carte.",
-        "Ecco il flop.",
-        "Interessante.",
+        "Analizziamo le prime tre carte.",
+        "Analizziamo le prime carte",
     ]
     robot.say(random.choice(reactions))
+    time.sleep(0.3)
+    robot.say("Vediamo tu cosa fai.")
 
 
 def action_new_turn(robot):
@@ -676,11 +677,14 @@ def action_new_turn(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Analizzo la quarta carta.",
-        "Il turn.",
-        "Analizzo un'altra carta.",
+        "Ecco la quarta carta.",
+        "Ecco un'altra carta.",
     ]
     robot.say(random.choice(reactions))
+    time.sleep(0.3)
+    robot.say("è il tuo turno")
+
+
 
 
 def action_new_river(robot):
@@ -692,11 +696,12 @@ def action_new_river(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Analizzo l'ultima carta.",
-        "Ecco il river.",
+        "Ecco l'ultima carta.",
+        "Questo è il momento decisivo.",
         "Momento decisivo.",
     ]
     robot.say(random.choice(reactions))
+    robot.say("Vediamo adesso come va a finire.")
 
 
 # =============================================================================
