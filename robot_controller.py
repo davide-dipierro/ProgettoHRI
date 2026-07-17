@@ -450,7 +450,7 @@ def action_bluff_failed(robot):
     #robot.gesture("shock")
     robot.gesture("shake_head")
     time.sleep(0.5)
-    robot.say("Oh no! In realtà ho mentito, non avevo niente di buono... Pensavo di spaventarti! Questa volta ho perso.")
+    robot.say("Fold! In realtà ho mentito, non avevo niente di buono... Pensavo di spaventarti! Questa volta ho perso.")
     time.sleep(0.5)
     robot.gesture("relax")
     robot.set_leds("white")
@@ -764,7 +764,7 @@ def action_robot_raise_bluff(robot):
     
     robot.set_leds("red")
     robot.look_at_user()
-    robot.gesture("confident")
+    # robot.gesture("confident")
     import random
     reactions = [
         "Rilancio. Ho un'ottima mano. I miei sensori non sbagliano mai.",
@@ -787,7 +787,7 @@ def action_robot_raise_bluff_1(robot):
     reactions = [
         "Alzo la posta. I miei sensori mi dicono che sono in vantaggio statistico.",
         "Rilancio. Le mie carte sono statisticamente vantaggiose. Ho la vittoria in tasca.",
-        "Raise. Ho analizzato la situazione, sono in una posizione di vittoria sicura.",
+        "Alzo la posta. Ho analizzato la situazione, sono in una posizione di vittoria sicura.",
         "Rilancio. Sono sicuro di vincere.",
         "Alzo la posta. Ho una probabilità matematica altissima di vincere.",
     ]
@@ -804,7 +804,7 @@ def action_robot_raise_bluff_2(robot):
     print("="*50)
     
     robot.look_at_user()
-    robot.gesture("aggressive")
+    # robot.gesture("aggressive")
     import random
     reactions = [
         "Rilancio ancora. Non hai paura di perdere? I miei calcoli dicono che la probabilità e' a mio favore.",
