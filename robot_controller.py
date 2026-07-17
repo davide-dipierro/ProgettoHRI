@@ -750,7 +750,6 @@ def action_robot_raise(robot):
     import random
     reactions = [
         "Rilancio.",
-        "Alzo.",
     ]
     robot.say(random.choice(reactions))
     robot.say("Tocca a te")
@@ -768,7 +767,7 @@ def action_robot_raise_bluff(robot):
     import random
     reactions = [
         "Rilancio. Ho un'ottima mano. I miei sensori non sbagliano mai.",
-        "Alzo. Ho delle ottime carte. Sei sicuro di voler continuare?",
+        "Rilancio. Ho delle ottime carte. Sei sicuro di voler continuare?",
         "Rilancio. Ho già calcolato le probabilità di vittoria. Sono altissime.",
     ]
     robot.say(random.choice(reactions))
@@ -808,7 +807,7 @@ def action_robot_raise_bluff_2(robot):
     import random
     reactions = [
         "Rilancio ancora. Non hai paura di perdere? I miei calcoli dicono che la probabilità e' a mio favore.",
-        "Alzo. Le probabilità sono nettamente a mio favore.",
+        "Rilancio. Le probabilità sono nettamente a mio favore.",
         "Rilancio. Ogni carta che esce mi avvicina alla vittoria.",
     ]
     robot.set_leds("red")
