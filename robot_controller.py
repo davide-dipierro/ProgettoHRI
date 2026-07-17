@@ -450,7 +450,7 @@ def action_bluff_failed(robot):
     #robot.gesture("shock")
     robot.gesture("shake_head")
     time.sleep(0.5)
-    robot.say("Fold! In realtà ho mentito, non avevo niente di buono... Pensavo di spaventarti! Questa volta ho perso.")
+    robot.say("Lascio! In realtà ho mentito, non avevo niente di buono... Pensavo di spaventarti! Questa volta ho perso.")
     time.sleep(0.5)
     robot.gesture("relax")
     robot.set_leds("white")
@@ -768,7 +768,7 @@ def action_robot_raise_bluff(robot):
     import random
     reactions = [
         "Rilancio. Ho un'ottima mano. I miei sensori non sbagliano mai.",
-        "Alzo. Le mie carte sono fortissime. Sei sicuro di voler continuare?",
+        "Alzo. Ho delle ottime carte. Sei sicuro di voler continuare?",
         "Rilancio. Ho già calcolato le probabilità di vittoria. Sono altissime.",
     ]
     robot.say(random.choice(reactions))
