@@ -92,6 +92,9 @@ class SimulatedRobot:
     def sit(self):
         print("[SIM] POSTURA: Seduto")
 
+    def _reset_upper_body(self, duration=0.5):
+        print("[SIM] POSTURA: Reset upper body")
+
 
 class NAORobot:
     """Controller sicuro per robot NAO fisico via qi SDK."""
@@ -132,9 +135,13 @@ class NAORobot:
         self.motion = self.session.service("ALMotion")
         self.posture = self.session.service("ALRobotPosture")
         self.leds = self.session.service("ALLeds")
+        try:
+            self.animation = self.session.service("ALAnimationPlayer")
+        except Exception as e:
+            print("[NAO WARN] ALAnimationPlayer non disponibile: {}".format(e))
         
         # Configura voce
-        self.tts.setParameter("speed", 75)
+        self.tts.setParameter("speed", 55)
         self.tts.setLanguage("Italian")
         
         # Configurazione ALAnimatedSpeech: passiamo bodyLanguageMode
@@ -208,7 +215,7 @@ class NAORobot:
         else:
             print("[NAO WARN] Colore LED non riconosciuto: '{}', ignorato".format(color))
     
-    def _reset_upper_body(self, duration=1.5):
+    def _reset_upper_body(self, duration=0.5):
         """Riporta braccia e testa alla posizione neutra senza muovere le gambe. IN ALTERNATIVA sostituire con goToPosture('StandInit').
         
         Usa angleInterpolation sui soli giunti superiori, evitando
@@ -241,23 +248,16 @@ class NAORobot:
             self.motion.wakeUp()
 
         if name == "wave":
-            # Saluto - angoli conservativi per non sbilanciare il robot
-            self.motion.angleInterpolation(
-                ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "RWristYaw"],
-                [0.5, -0.2, 1.0, 0.0],
-                [0.8, 0.8, 0.8, 0.8],
-                True
-            )
-            time.sleep(0.3)
-            # Loop del polso - ampiezza e velocità ridotte
-            for _ in range(2):
-                self.motion.setAngles("RWristYaw", 0.3, 0.2)
-                time.sleep(0.4)
-                self.motion.setAngles("RWristYaw", -0.3, 0.2)
-                time.sleep(0.4)
+            if hasattr(self, "animation"):
+                try:
+                    self.animation.run("animations/Stand/Gestures/Hey_6")
+                except Exception as e:
+                    print("[NAO WARN] Animazione 'Hey_6' fallita: {}".format(e))
+            else:
+                print("[NAO WARN] Animazione wave saltata, ALAnimationPlayer mancante")
             
             # Ritorno sicuro lento (solo braccia e testa)
-            self._reset_upper_body(2.0)
+            self._reset_upper_body(1.0)
             
         elif name == "nod":
             # Annuire
@@ -281,32 +281,26 @@ class NAORobot:
             self.motion.setAngles("HeadPitch", 0.0, 0.2)
             
         elif name == "confident":
-            # Posa fiera
-            self.motion.angleInterpolation(
-                ["RShoulderPitch", "RShoulderRoll", "RElbowYaw", "RElbowRoll"],
-                [0.5, -0.2, 1.0, 1.0],
-                [0.8, 0.8, 0.8, 0.8], # Velocizzato per maggiore reattività
-                True
-            )
-            time.sleep(0.3)
+            if hasattr(self, "animation"):
+                try:
+                    self.animation.run("animations/Stand/Gestures/Me_1")
+                except Exception as e:
+                    print("[NAO WARN] Animazione 'Me_1' fallita: {}".format(e))
             self._reset_upper_body(0.8)
             
         elif name == "aggressive":
-            # --- SICUREZZA: solo braccio destro + testa ---
-            # Muovere entrambe le braccia in avanti sbilanciava il robot
-            # causando cadute. Usiamo solo il braccio destro con angoli
-            # conservativi e movimenti lenti.
             self.set_leds("red")
-            
-            names = ["RShoulderPitch", "RShoulderRoll", "RElbowRoll", "HeadPitch"]
-            keys = [0.5, -0.15, 0.8, 0.15]
-            times = [0.8, 0.8, 0.8, 0.8] # Velocizzato
-            
-            self.motion.angleInterpolation(names, keys, times, True)
-            time.sleep(0.3)
+            if hasattr(self, "animation"):
+                try:
+                    # Usiamo You_1: il robot indica l'utente
+                    self.animation.run("animations/Stand/Gestures/You_1")
+                except Exception as e:
+                    print("[NAO WARN] Animazione 'You_1' fallita: {}".format(e))
+            else:
+                print("[NAO WARN] Animazione aggressive saltata, ALAnimationPlayer mancante")
+                
             self.set_leds("white")
-            self._reset_upper_body(0.8)
-            time.sleep(0.5)  # Attesa stabilita' prima di proseguire
+            self._reset_upper_body(0.5)
             
         elif name == "shock":
             # Shock leggero - solo testa e spalle, senza alzare le braccia
@@ -378,7 +372,7 @@ def action_intro(robot):
     print("="*50)
     
     robot.set_leds("white")
-    robot.stand()
+    robot._reset_upper_body()
     robot.look_at_user()
     robot.gesture("wave")
     robot.say("Ciao! Sono pronto per giocare a poker con te.")
@@ -412,16 +406,16 @@ def action_bluff(robot):
     robot.set_leds("red")
     time.sleep(0.3)
     
-    # Postura aggressiva
-    robot.gesture("aggressive")
+    # Postura aggressiva (temporaneamente rimossa)
+    # robot.gesture("aggressive")
     robot.look_at_user()
     
     # Frasi intimidatorie - pause drammatiche
     robot.say("Vado ollin.")
     time.sleep(1.5)
-    robot.say("Ho calcolato tutte le probabilita'.")
+    robot.say("Ho calcolato tutte le probabilità.")
     time.sleep(0.2)
-    robot.say("La statistica e' dalla mia parte. Ho il novantadue percento di probabilità di vincere.")
+    robot.say("La statistica è dalla mia parte. Ho il novantadue percento di probabilità di vincere.")
     time.sleep(0.2)
     robot.say("Pensaci bene prima di chiamare. Potresti perdere tutto.")
     
@@ -456,7 +450,7 @@ def action_bluff_failed(robot):
     #robot.gesture("shock")
     robot.gesture("shake_head")
     time.sleep(0.5)
-    robot.say("In realtà ho mentito, non avevo una bella mano... Pensavo di spaventarti! Questa volta ho perso.")
+    robot.say("Oh no! In realtà ho mentito, non avevo niente di buono... Pensavo di spaventarti! Questa volta ho perso.")
     time.sleep(0.5)
     robot.gesture("relax")
     robot.set_leds("white")
@@ -484,7 +478,7 @@ def action_victory(robot):
     
     robot.set_leds("green")
     robot.gesture("celebrate")
-    robot.say("Ho vinto! E' stata una bella partita.")
+    robot.say("Ho vinto! è stata una bella partita.")
     time.sleep(0.3)
     robot.say("Grazie per aver giocato con me.")
     robot.gesture("wave")
@@ -522,7 +516,6 @@ def action_react_user_check(robot):
     reactions = [
         "Ok.",
         "Bene.",
-        "Fammi pensare..",
     ]
     robot.say(random.choice(reactions))
 
@@ -536,8 +529,10 @@ def action_react_user_call(robot):
     robot.look_at_user()
     import random
     reactions = [
-        "Ok, vediamo le carte.",
-        "Ok, andiamo avanti.",
+        "Ok",
+        "Perfetto",
+        "Bene",
+        "Va bene",
     ]
     robot.say(random.choice(reactions))
 
@@ -552,8 +547,8 @@ def action_react_user_raise(robot):
     robot.gesture("nod")
     import random
     reactions = [
-        "Ah, vuoi giocare cosi'?",
-        "Interessante mossa.",
+        "Ah, vuoi giocare così?",
+        "Bella mossa.",
         "Sei proprio sicuro di te.",
     ]
     robot.say(random.choice(reactions))
@@ -591,8 +586,8 @@ def action_react_user_fold(robot):
     robot.gesture("nod")
     import random
     reactions = [
-        "Scelta prudente.",
-        "Hai fatto bene a tirarti indietro.",
+        "Scelta prudente. Per questa volta ho vinto io.",
+        "Hai fatto bene a tirarti indietro. Per questa volta ho vinto io",
         "Per questa volta ho vinto io.",
     ]
     robot.say(random.choice(reactions))
@@ -608,8 +603,11 @@ def action_thinking(robot):
     import random
     reactions = [
         "Fammi pensare...",
-        "Vediamo...",
-        "Interessante situazione...",
+        "Vediamo che mossa posso fare...",
+        "Pensiamo",
+        "Vediamo un po'",
+        "Ok, pensiamo un attimo",
+
     ]
     robot.say(random.choice(reactions))
 
@@ -664,8 +662,6 @@ def action_new_flop(robot):
         "Analizziamo le prime carte",
     ]
     robot.say(random.choice(reactions))
-    time.sleep(0.3)
-    robot.say("Vediamo tu cosa fai.")
 
 
 def action_new_turn(robot):
@@ -678,11 +674,10 @@ def action_new_turn(robot):
     import random
     reactions = [
         "Ecco la quarta carta.",
+        "Ecco un'altra carta. La situazione si sta facendo interessante...",
         "Ecco un'altra carta.",
     ]
     robot.say(random.choice(reactions))
-    time.sleep(0.3)
-    robot.say("è il tuo turno")
 
 
 
@@ -715,7 +710,7 @@ def action_robot_check(robot):
     print("="*50)
     
     robot.look_at_user()
-    robot.say("Check.")
+    robot.say("Passo e vedo.")
 
 
 def action_robot_call(robot):
@@ -728,7 +723,7 @@ def action_robot_call(robot):
     import random
     reactions = [
         "Chiamo.",
-        "Vedo.",
+        "Io vedo.",
         "Ok, chiamo.",
     ]
     robot.say(random.choice(reactions))
@@ -756,9 +751,9 @@ def action_robot_raise(robot):
     reactions = [
         "Rilancio.",
         "Alzo.",
-        "Raise.",
     ]
     robot.say(random.choice(reactions))
+    robot.say("Tocca a te")
 
 
 def action_robot_raise_bluff(robot):
@@ -773,10 +768,11 @@ def action_robot_raise_bluff(robot):
     import random
     reactions = [
         "Rilancio. Ho un'ottima mano. I miei sensori non sbagliano mai.",
-        "Raise. Le mie carte sono fortissime. Sei sicuro di voler continuare?",
-        "Rilancio. Ho gia' calcolato le probabilita' di vittoria. Sono altissime.",
+        "Alzo. Le mie carte sono fortissime. Sei sicuro di voler continuare?",
+        "Rilancio. Ho già calcolato le probabilità di vittoria. Sono altissime.",
     ]
     robot.say(random.choice(reactions))
+    robot.say("Tocca a te")
     robot.set_leds("white")
 
 
@@ -787,17 +783,16 @@ def action_robot_raise_bluff_1(robot):
     print("="*50)
     
     robot.set_leds("red")
-    robot.look_at_user()
-    robot.gesture("confident")
     import random
     reactions = [
         "Alzo la posta. I miei sensori mi dicono che sono in vantaggio statistico.",
-        "Rilancio. Le mie carte sono statisticamente vantaggiose.",
+        "Rilancio. Le mie carte sono statisticamente vantaggiose. Ho la vittoria in tasca.",
         "Raise. Ho analizzato la situazione, sono in una posizione di vittoria sicura.",
         "Rilancio. Sono sicuro di vincere.",
         "Alzo la posta. Ho una probabilità matematica altissima di vincere.",
     ]
     robot.say(random.choice(reactions))
+    robot.say("Tocca a te")
     time.sleep(0.3)
     robot.set_leds("white")
 
@@ -808,17 +803,18 @@ def action_robot_raise_bluff_2(robot):
     print("AZIONE: ROBOT_RAISE_BLUFF_2 (Intimidazione - Fase 2)")
     print("="*50)
     
-    robot.set_leds("red")
     robot.look_at_user()
     robot.gesture("aggressive")
     import random
     reactions = [
-        "Rilancio ancora. Non hai paura di perdere? I miei calcoli dicono che la probabilita' e' a mio favore.",
-        "Raise. Le probabilita' sono nettamente a mio favore.",
+        "Rilancio ancora. Non hai paura di perdere? I miei calcoli dicono che la probabilità e' a mio favore.",
+        "Alzo. Le probabilità sono nettamente a mio favore.",
         "Rilancio. Ogni carta che esce mi avvicina alla vittoria.",
     ]
+    robot.set_leds("red")
     robot.say(random.choice(reactions))
-    time.sleep(0.5)
+    robot.say("Tocca a te")
+    time.sleep(0.2)
     robot.set_leds("white")
 
 
@@ -834,6 +830,7 @@ def action_robot_allin(robot):
     robot.say("Vado ollin.") # "All in" 
     time.sleep(0.3)
     robot.say("Metto tutte le mie chips.")
+    robot.say("Tocca a te")
     robot.set_leds("white")
 
 
@@ -1021,6 +1018,12 @@ def main():
                     robot_state["is_interacting"] = True
                     try:
                         actions_map[action_name](robot_state["robot"])
+                        
+                        # Reset della postura al termine dell'animazione complessiva dell'azione
+                        # in modo che il robot non rimanga bloccato dopo l'ultimo say contestuale
+                        if hasattr(robot_state["robot"], "_reset_upper_body"):
+                            robot_state["robot"]._reset_upper_body()
+                            
                     except Exception as e:
                         print("[ERROR] Errore azione asincrona '{}': {}".format(action_name, e))
                     finally:
@@ -1114,6 +1117,11 @@ def main():
         if action_func:
             try:
                 action_func(cli_robot)
+                
+                # Reset della postura al termine dell'animazione
+                if hasattr(cli_robot, "_reset_upper_body"):
+                    cli_robot._reset_upper_body()
+                    
                 print("\n[OK] Azione '{}' completata".format(args.action))
             except Exception as e:
                 print("\n[ERROR] Errore durante l'azione: {}".format(e))
