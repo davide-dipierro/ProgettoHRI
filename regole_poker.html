@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regole del Gioco di Carte – HRI Experiment</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ================================================================
+           RESET & BASE
+           ================================================================ */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #112240;
+            --glass-bg: rgba(255, 255, 255, 0.06);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --accent-blue: #00d2ff;
+            --accent-gold: #f7b733;
+            --accent-green: #00b09b;
+            --accent-red: #ff4b2b;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: radial-gradient(ellipse at 20% 0%, #1a2a6c 0%, #112240 40%, #0b0f19 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.7;
+            font-size: 15px;
+        }
+
+        /* ================================================================
+           LAYOUT
+           ================================================================ */
+        .page-wrapper {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 40px 28px 60px;
+        }
+
+        /* ================================================================
+           HEADER
+           ================================================================ */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            display: block;
+            width: 120px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-blue), var(--accent-gold));
+            margin: 20px auto 0;
+            border-radius: 2px;
+        }
+        .header .emoji-title {
+            font-size: 3rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1px;
+        }
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-top: 8px;
+            font-weight: 300;
+        }
+
+        /* ================================================================
+           SECTIONS
+           ================================================================ */
+        .section {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 28px 32px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: border-color 0.3s;
+        }
+        .section:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .section h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section h2 .icon {
+            font-size: 1.5rem;
+        }
+        .section h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+        .section p, .section li {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.75;
+        }
+        .section ul, .section ol {
+            padding-left: 22px;
+            margin-top: 8px;
+        }
+        .section li {
+            margin-bottom: 6px;
+        }
+        .section li strong {
+            color: var(--text-primary);
+        }
+
+        /* ================================================================
+           HIGHLIGHT BOXES
+           ================================================================ */
+        .highlight-box {
+            background: rgba(0, 210, 255, 0.08);
+            border-left: 4px solid var(--accent-blue);
+            border-radius: 0 12px 12px 0;
+            padding: 16px 20px;
+            margin: 16px 0;
+        }
+        .highlight-box.gold {
+            background: rgba(247, 183, 51, 0.08);
+            border-left-color: var(--accent-gold);
+        }
+        .highlight-box.green {
+            background: rgba(0, 176, 155, 0.08);
+            border-left-color: var(--accent-green);
+        }
+        .highlight-box.red {
+            background: rgba(255, 75, 43, 0.08);
+            border-left-color: var(--accent-red);
+        }
+        .highlight-box p {
+            color: var(--text-primary) !important;
+            font-size: 0.93rem;
+        }
+
+        /* ================================================================
+           CARDS VISUAL
+           ================================================================ */
+        .cards-demo {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 18px 0;
+        }
+        .demo-card {
+            width: 52px;
+            height: 76px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            position: relative;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1.5px solid rgba(255,255,255,0.15);
+        }
+        .demo-card .value { font-size: 0.9rem; }
+        .demo-card .suit  { font-size: 1.3rem; margin-top: 2px; }
+        .demo-card.red  { color: #ef4444; }
+        .demo-card.black { color: #e2e8f0; }
+
+        /* ================================================================
+           TABLE: HAND RANKINGS
+           ================================================================ */
+        .rankings-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 16px 0;
+            font-size: 0.9rem;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .rankings-table th {
+            background: rgba(0, 210, 255, 0.12);
+            color: var(--accent-blue);
+            font-weight: 600;
+            text-align: left;
+            padding: 12px 16px;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 0.5px;
+        }
+        .rankings-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-secondary);
+        }
+        .rankings-table tr:last-child td { border-bottom: none; }
+        .rankings-table tr:nth-child(even) td {
+            background: rgba(255,255,255,0.02);
+        }
+        .rankings-table .rank-num {
+            color: var(--accent-gold);
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+        }
+        .rankings-table .hand-name {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* ================================================================
+           ACTIONS TABLE
+           ================================================================ */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .action-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 16px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .action-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255,255,255,0.2);
+        }
+        .action-card .action-name {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .action-card .action-desc {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        .action-card.fold   .action-name { color: var(--accent-red); }
+        .action-card.check  .action-name { color: var(--accent-green); }
+        .action-card.call   .action-name { color: var(--accent-blue); }
+        .action-card.raise  .action-name { color: var(--accent-gold); }
+        .action-card.allin  .action-name { color: #c084fc; }
+
+        /* ================================================================
+           FLOW DIAGRAM
+           ================================================================ */
+        .flow-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .flow-step {
+            background: linear-gradient(135deg, rgba(0,210,255,0.1), rgba(247,183,51,0.05));
+            border: 1px solid rgba(0,210,255,0.2);
+            border-radius: 12px;
+            padding: 12px 18px;
+            text-align: center;
+            min-width: 100px;
+        }
+        .flow-step .step-name {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--accent-blue);
+        }
+        .flow-step .step-detail {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .flow-arrow {
+            font-size: 1.3rem;
+            color: var(--accent-gold);
+            padding: 0 6px;
+        }
+
+        /* ================================================================
+           PARAM PILLS
+           ================================================================ */
+        .params {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 18px 0;
+        }
+        .param-pill {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50px;
+            padding: 10px 22px;
+            text-align: center;
+        }
+        .param-pill .param-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .param-pill .param-value {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+            margin-top: 2px;
+        }
+
+        /* ================================================================
+           FOOTER
+           ================================================================ */
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+        }
+
+        /* ================================================================
+           PRINT STYLES
+           ================================================================ */
+        @media print {
+            body {
+                background: white !important;
+                color: #1a1a1a !important;
+                font-size: 12pt;
+            }
+            .page-wrapper { padding: 0; max-width: 100%; }
+            .section {
+                background: none !important;
+                border: 1.5px solid #ddd !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .section:hover { border-color: #ddd !important; }
+            .header h1 {
+                -webkit-text-fill-color: #1a2a6c !important;
+                color: #1a2a6c !important;
+            }
+            .header::after { background: #1a2a6c !important; }
+            .section h2 { color: #1a2a6c !important; }
+            .section h3 { color: #2563eb !important; }
+            .section p, .section li { color: #374151 !important; }
+            .section li strong { color: #111827 !important; }
+            .highlight-box { background: #f3f4f6 !important; }
+            .highlight-box p { color: #111827 !important; }
+            .rankings-table th {
+                background: #e0f2fe !important;
+                color: #0c4a6e !important;
+            }
+            .rankings-table td { color: #374151 !important; }
+            .rankings-table .rank-num { color: #b45309 !important; }
+            .rankings-table .hand-name { color: #111827 !important; }
+            .action-card { background: #f9fafb !important; border-color: #d1d5db !important; }
+            .action-card .action-desc { color: #374151 !important; }
+            .action-card.fold   .action-name { color: #dc2626 !important; }
+            .action-card.check  .action-name { color: #059669 !important; }
+            .action-card.call   .action-name { color: #2563eb !important; }
+            .action-card.raise  .action-name { color: #d97706 !important; }
+            .action-card.allin  .action-name { color: #7c3aed !important; }
+            .demo-card { background: white !important; border-color: #d1d5db !important; }
+            .demo-card.black { color: #111827 !important; }
+            .flow-step { background: #f0f9ff !important; border-color: #bae6fd !important; }
+            .flow-step .step-name { color: #0369a1 !important; }
+            .flow-step .step-detail { color: #6b7280 !important; }
+            .flow-arrow { color: #d97706 !important; }
+            .param-pill { background: #fef3c7 !important; border-color: #fcd34d !important; }
+            .param-pill .param-label { color: #6b7280 !important; }
+            .param-pill .param-value { color: #b45309 !important; }
+            .footer { color: #9ca3af !important; border-top-color: #e5e7eb !important; }
+        }
+
+        @page {
+            size: A4;
+            margin: 18mm 15mm;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+
+        <!-- ============================================================
+             HEADER
+             ============================================================ -->
+        <header class="header">
+            <span class="emoji-title">🃏🤖</span>
+            <h1>Regole del Gioco</h1>
+            <p class="subtitle">HRI Experiment — Gioco di carte semplificato</p>
+        </header>
+
+        <!-- ============================================================
+             1. INTRODUZIONE
+             ============================================================ -->
+        <section class="section">
+            <h2><span class="icon">📖</span> Introduzione</h2>
+            <p>
+                In questo esperimento giocherai a un <strong>gioco di carte</strong> contro un robot NAO.
+                Si tratta di una versione semplificata: non servono conoscenze avanzate,
+                basta seguire queste regole.
+            </p>
+            <div class="highlight-box">
+                <p>
+                    🎯 <strong>Obiettivo:</strong> vincere le chips dell'avversario avendo la combinazione
+                    di carte migliore, oppure costringendolo a ritirarsi (fold).
+                </p>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             2. PARAMETRI DELLA PARTITA
+             ============================================================ -->
+        <section class="section">
+            <h2><span class="icon">⚙️</span> Parametri della Partita</h2>
+            <p>La partita è composta da <strong>3 mani</strong>. All'inizio di ogni mano, le chips vengono resettate.</p>
+            <div class="params">
+                <div class="param-pill">
+                    <div class="param-label">Mani Totali</div>
+                    <div class="param-value">3</div>
+                </div>
+                <div class="param-pill">
+                    <div class="param-label">Chips Iniziali</div>
+                    <div class="param-value">1 000</div>
+                </div>
+                <div class="param-pill">
+                    <div class="param-label">Small Blind</div>
+                    <div class="param-value">10</div>
+                </div>
+                <div class="param-pill">
+                    <div class="param-label">Big Blind</div>
+                    <div class="param-value">20</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             3. COME SI GIOCA
+             ============================================================ -->
+        <section class="section">
+            <h2><span class="icon">🎮</span> Come si Gioca</h2>
+
+            <h3>Le Carte</h3>
+            <p>
+                Ogni giocatore riceve <strong>2 carte coperte</strong> (le sue carte personali).
+                Durante la mano vengono scoperte fino a <strong>5 carte comuni</strong> sul tavolo,
+                condivise da entrambi i giocatori.
+            </p>
+
+            <div class="cards-demo">
+                <div class="demo-card red">
+                    <span class="value">A</span>
+                    <span class="suit">♥</span>
+                </div>
+                <div class="demo-card black">
+                    <span class="value">K</span>
+                    <span class="suit">♠</span>
+                </div>
+                <span style="color: var(--text-secondary); align-self: center; padding: 0 6px; font-size: 0.8rem;">+</span>
+                <div class="demo-card black">
+                    <span class="value">7</span>
+                    <span class="suit">♣</span>
+                </div>
+                <div class="demo-card red">
+                    <span class="value">3</span>
+                    <span class="suit">♦</span>
+                </div>
+                <div class="demo-card black">
+                    <span class="value">J</span>
+                    <span class="suit">♠</span>
+                </div>
+                <div class="demo-card red">
+                    <span class="value">10</span>
+                    <span class="suit">♦</span>
+                </div>
+                <div class="demo-card black">
+                    <span class="value">5</span>
+                    <span class="suit">♣</span>
+                </div>
+            </div>
+            <p style="text-align: center; font-size: 0.82rem; color: var(--text-secondary);">
+                <em>2 carte personali + 5 carte comuni = la migliore combinazione di 5 carte</em>
+            </p>
+
+            <h3>Fasi di una Mano (Street)</h3>
+            <p>Ogni mano si sviluppa in 4 fasi. In ciascuna, i giocatori possono puntare a turno:</p>
+
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <div class="step-name">Pre-Flop</div>
+                    <div class="step-detail">Solo carte personali</div>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                    <div class="step-name">Flop</div>
+                    <div class="step-detail">3 carte comuni</div>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                    <div class="step-name">Turn</div>
+                    <div class="step-detail">4ª carta comune</div>
+                </div>
+                <span class="flow-arrow">→</span>
+                <div class="flow-step">
+                    <div class="step-name">River</div>
+                    <div class="step-detail">5ª carta comune</div>
+                </div>
+            </div>
+
+            <h3>I Blind (Puntate Obbligatorie)</h3>
+            <p>
+                All'inizio di ogni mano, vengono piazzati i <strong>blind</strong> automaticamente:
+            </p>
+            <ul>
+                <li><strong>Small Blind (10 chips):</strong> puntata obbligatoria piazzata dal giocatore.</li>
+                <li><strong>Big Blind (20 chips):</strong> puntata obbligatoria piazzata dal robot.</li>
+            </ul>
+            <p>Questi formano il <strong>pot iniziale</strong> (30 chips).</p>
+        </section>
+
+        <!-- ============================================================
+             4. AZIONI DISPONIBILI
+             ============================================================ -->
+        <section class="section">
+            <h2><span class="icon">🎯</span> Azioni Disponibili</h2>
+            <p>Quando è il tuo turno, puoi scegliere tra le seguenti azioni:</p>
+
+            <div class="actions-grid">
+                <div class="action-card fold">
+                    <div class="action-name">✗ Fold</div>
+                    <div class="action-desc">
+                        Ti ritiri dalla mano. Perdi le chips già puntate, ma non rischi di perderne altre.
+                    </div>
+                </div>
+                <div class="action-card check">
+                    <div class="action-name">✓ Check</div>
+                    <div class="action-desc">
+                        Passi il turno senza puntare. Possibile solo se nessuno ha puntato prima di te in questa fase.
+                    </div>
+                </div>
+                <div class="action-card call">
+                    <div class="action-name">📞 Call</div>
+                    <div class="action-desc">
+                        Pareggi la puntata dell'avversario aggiungendo chips al pot per uguagliare la sua scommessa.
+                    </div>
+                </div>
+                <div class="action-card raise">
+                    <div class="action-name">⬆️ Raise</div>
+                    <div class="action-desc">
+                        Aumenti la puntata oltre il livello corrente. Il rilancio minimo è pari alla puntata attuale + 20 (big blind).
+                    </div>
+                </div>
+                <div class="action-card allin" style="grid-column: 1 / -1;">
+                    <div class="action-name">💰 ALL-IN</div>
+                    <div class="action-desc">
+                        Punti tutte le tue chips rimanenti. L'avversario deve decidere se chiamare o ritirarsi.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             5. COMBINAZIONI (RANKING)
+             ============================================================ -->
+        <section class="section">
+            <h2><span class="icon">👑</span> Combinazioni di Carte</h2>
+            <p>
+                La mano migliore vince. Ecco le combinazioni dalla più forte alla più debole
+                (vince la combinazione più alta in classifica):
+            </p>
+
+            <table class="rankings-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Combinazione</th>
+                        <th>Esempio</th>
+                        <th>Descrizione</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="rank-num">1</td>
+                        <td class="hand-name">Scala Reale</td>
+                        <td>10♠ J♠ Q♠ K♠ A♠</td>
+                        <td>Scala dal 10 all'Asso, tutte dello stesso seme</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">2</td>
+                        <td class="hand-name">Scala Colore</td>
+                        <td>5♥ 6♥ 7♥ 8♥ 9♥</td>
+                        <td>Cinque carte consecutive dello stesso seme</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">3</td>
+                        <td class="hand-name">Quattro Uguali</td>
+                        <td>K♠ K♥ K♦ K♣ 3♠</td>
+                        <td>Quattro carte dello stesso valore</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">4</td>
+                        <td class="hand-name">Full House</td>
+                        <td>J♠ J♥ J♦ 8♣ 8♠</td>
+                        <td>Un tris + una coppia</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">5</td>
+                        <td class="hand-name">Colore</td>
+                        <td>2♦ 5♦ 7♦ 10♦ K♦</td>
+                        <td>Cinque carte dello stesso seme (non in sequenza)</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">6</td>
+                        <td class="hand-name">Scala</td>
+                        <td>4♣ 5♦ 6♠ 7♥ 8♣</td>
+                        <td>Cinque carte consecutive di semi diversi</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">7</td>
+                        <td class="hand-name">Tris</td>
+                        <td>10♥ 10♠ 10♦ 5♣ J♠</td>
+                        <td>Tre carte dello stesso valore</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">8</td>
+                        <td class="hand-name">Doppia Coppia</td>
+                        <td>A♠ A♦ 7♣ 7♥ 3♠</td>
+                        <td>Due coppie distinte</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">9</td>
+                        <td class="hand-name">Coppia</td>
+                        <td>Q♥ Q♣ 4♦ 8♠ K♠</td>
+                        <td>Due carte dello stesso valore</td>
+                    </tr>
+                    <tr>
+                        <td class="rank-num">10</td>
+                        <td class="hand-name">Carta Alta</td>
+                        <td>A♠ 9♦ 7♣ 4♥ 2♠</td>
+                        <td>Nessuna combinazione: vince la carta più alta</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ============================================================
+             6. COME SI VINCE
+             ============================================================ -->
+        <section class="section">
+            <h2><span class="icon">🏆</span> Come si Vince una Mano</h2>
+            <p>Ci sono due modi per vincere una mano:</p>
+            <ol>
+                <li>
+                    <strong>Showdown:</strong> se entrambi i giocatori arrivano alla fine (dopo il River),
+                    le carte vengono mostrate e vince chi ha la combinazione migliore.
+                </li>
+                <li>
+                    <strong>Fold dell'avversario:</strong> se l'avversario si ritira (fold) in qualsiasi momento,
+                    tu vinci il pot senza dover mostrare le carte.
+                </li>
+            </ol>
+
+            <div class="highlight-box gold">
+                <p>
+                    💡 <strong>Suggerimento:</strong> anche se le tue carte non sono fortissime, puoi provare
+                    a bluffare puntando alto per far ritirare l'avversario. Ma attenzione: anche il robot
+                    potrebbe farlo!
+                </p>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             7. INTERFACCIA DI GIOCO
+             ============================================================ -->
+        <section class="section">
+            <h2><span class="icon">🖥️</span> L'Interfaccia di Gioco</h2>
+            <p>Sullo schermo vedrai:</p>
+            <ul>
+                <li><strong>💰 Le tue chips</strong> — le chips a tua disposizione</li>
+                <li><strong>🏆 Il Pot</strong> — le chips in palio nella mano corrente</li>
+                <li><strong>🤖 Chips Robot</strong> — le chips del tuo avversario</li>
+                <li><strong>Le tue carte</strong> — visibili solo a te (2 carte)</li>
+                <li><strong>Carte comuni</strong> — visibili a entrambi (fino a 5)</li>
+                <li><strong>Carte del robot</strong> — coperte fino allo showdown</li>
+                <li><strong>Pulsanti azione</strong> — Fold, Check/Call, Raise, ALL-IN</li>
+            </ul>
+
+            <div class="highlight-box green">
+                <p>
+                    🎯 Quando è il tuo turno, il messaggio <strong>"È il tuo turno!"</strong> apparirà sullo schermo
+                    e i pulsanti saranno attivi. Quando è il turno del robot, i pulsanti saranno disabilitati.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             8. SVOLGIMENTO DELL'ESPERIMENTO
+             ============================================================ -->
+        <section class="section">
+            <h2><span class="icon">🔬</span> Svolgimento dell'Esperimento</h2>
+            <ol>
+                <li>L'esperimentatore avvia il gioco dalla console di controllo.</li>
+                <li>Il robot si presenta e spiega che giocherete insieme.</li>
+                <li>Si giocano <strong>3 mani</strong> una dopo l'altra.</li>
+                <li>All'inizio di ogni mano le chips tornano a <strong>1 000</strong>.</li>
+                <li>Alla fine delle 3 mani, ti verrà chiesto di compilare un <strong>breve questionario</strong>.</li>
+            </ol>
+
+            <div class="highlight-box red">
+                <p>
+                    ⚠️ <strong>Importante:</strong> gioca in modo naturale! Non esiste una strategia
+                    "giusta" o "sbagliata". Lo scopo dell'esperimento è osservare l'interazione,
+                    non valutare le tue abilità di gioco.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             FOOTER
+             ============================================================ -->
+        <footer class="footer">
+            <p>HRI Experiment · Regole del Gioco di Carte</p>
+            <p style="margin-top: 4px;">Per qualsiasi dubbio, chiedi all'esperimentatore prima di iniziare.</p>
+        </footer>
+
+    </div>
+</body>
+</html>
