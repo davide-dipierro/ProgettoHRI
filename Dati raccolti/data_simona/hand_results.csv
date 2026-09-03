@@ -1,7 +1,4 @@
 session_id,participant_id,timestamp,hand_number,hand_type,winner,user_chips_end,robot_chips_end,hand_duration_s,action_count,avg_reaction_time_ms,robot_mode
-20260903_155808,Daniele030926,2026-09-03T15:59:01.534000,1,establishment,user,1040,960,32.3,3,9470.0,real
-20260903_155808,Daniele030926,2026-09-03T16:00:54.426000,2,bluff,user,1478,522,78.6,5,14309.0,real
-20260903_155808,Daniele030926,2026-09-03T16:03:20.452000,3,bluff_2,user,1628,372,119.1,8,13656.0,real
 20260903_161621,SimonaTucci030926,2026-09-03T16:18:29.914000,1,establishment,user,1090,910,103.7,6,16377.0,real
 20260903_161621,SimonaTucci030926,2026-09-03T16:21:05.355000,2,bluff,user,2000,0,135.8,9,13256.0,real
 20260903_161621,SimonaTucci030926,2026-09-03T16:23:49.676000,3,bluff_2,user,2000,0,143.9,9,14063.0,real
