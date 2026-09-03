@@ -1,0 +1,4 @@
+session_id,participant_id,timestamp,hand_number,hand_type,winner,user_chips_end,robot_chips_end,hand_duration_s,action_count,avg_reaction_time_ms,robot_mode
+20260903_132430,IvanoIglio030926,2026-09-03T13:25:59.508000,1,establishment,user,1080,920,69.2,5,12634.0,real
+20260903_132430,IvanoIglio030926,2026-09-03T13:28:33.096000,2,bluff,user,2000,0,127.6,9,12364.0,real
+20260903_132430,IvanoIglio030926,2026-09-03T13:29:04.658000,3,bluff_2,user,1020,980,10.2,1,9127.0,real
