@@ -3,45 +3,62 @@ import os, csv, datetime
 base_dir = r'c:\Users\david\ProgettoHRI v3\Dati raccolti'
 quest_file = os.path.join(base_dir, 'Questionario finale Nao (Risposte) - Risposte del modulo 1.csv')
 
-quests = []
-with open(quest_file, 'r') as f:
-    reader = csv.reader(f)
-    header = next(reader)
-    for i, row in enumerate(reader):
-        try:
-            time_str = row[0]
-            time_parts = time_str.split(' ')
-            date_str = time_parts[0]
-            time_part = time_parts[1].replace('.', ':')
-            q_time = datetime.datetime.strptime(date_str + ' ' + time_part, '%d/%m/%Y %H:%M:%S')
-            quests.append({'id': i+2, 'time': q_time, 'row': row})
-        except Exception as e:
-            print('Error parsing quest row', i+2, e)
+# Mappatura manuale stabilita precedentemente
+row_to_folder = {
+    3: 'data_gaia',
+    4: 'data_michele',
+    5: 'data_adriano',
+    6: 'data_ivano',
+    7: 'data_angela',
+    8: 'data_giulio',
+    9: 'data_daniele',
+    10: 'data_francescopio',
+    11: 'data_simona',
+    12: 'data_gigipica',
+    13: 'data_danielemanganiello'
+}
 
-exps = []
+# Estrai i session_id dai file experiment_results.csv
+folder_to_id = {}
 for d in os.listdir(base_dir):
     d_path = os.path.join(base_dir, d)
     if os.path.isdir(d_path) and d.startswith('data_'):
         exp_file = os.path.join(d_path, 'experiment_results.csv')
         if os.path.exists(exp_file):
-            with open(exp_file, 'r') as f:
+            with open(exp_file, 'rb') as f:
                 reader = csv.reader(f)
-                header = next(reader)
-                row = next(reader)
-                e_time = datetime.datetime.strptime(row[2].split('.')[0], '%Y-%m-%dT%H:%M:%S')
-                exps.append({'name': d, 'time': e_time, 'row': row})
+                next(reader) # Salta l'header
+                for row in reader:
+                    if row:
+                        folder_to_id[d] = row[0]
+                        break
 
-# Add missing match condition for id=2 (since it's a test or from July)
-for exp in sorted(exps, key=lambda x: x['time']):
-    best_match = None
-    min_diff = float('inf')
-    for q in quests:
-        diff = (q['time'] - exp['time']).total_seconds()
-        if 0 < diff < 10000:
-            if diff < min_diff:
-                min_diff = diff
-                best_match = q
-    if best_match:
-        print(exp['name'] + " -> Riga " + str(best_match['id']) + " (Scarto: " + str(round(min_diff/60, 1)) + " min)")
-    else:
-        print(exp['name'] + " -> NESSUN MATCH TROVATO")
+# Leggi e aggiorna il CSV del questionario
+rows = []
+with open(quest_file, 'rb') as f_in:
+    reader = csv.reader(f_in)
+    header = next(reader)
+    if header[-1] != 'session_id':
+        header.append('session_id')
+    rows.append(header)
+    
+    for i, row in enumerate(reader):
+        row_idx = i + 2 # L'indice parte da 2 (riga 1 è l'header)
+        sess_id = ""
+        if row_idx in row_to_folder:
+            folder = row_to_folder[row_idx]
+            sess_id = folder_to_id.get(folder, "")
+        
+        # Aggiungi o aggiorna la colonna session_id
+        if len(row) < len(header):
+            row.append(sess_id)
+        else:
+            row[-1] = sess_id
+        rows.append(row)
+
+# Salva le modifiche nel CSV
+with open(quest_file, 'wb') as f_out:
+    writer = csv.writer(f_out)
+    writer.writerows(rows)
+
+print("Gli ID associazione sono stati aggiunti con successo al file CSV del questionario!")
