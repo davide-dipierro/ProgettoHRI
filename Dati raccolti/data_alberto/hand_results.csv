@@ -1,0 +1,4 @@
+session_id,participant_id,timestamp,hand_number,hand_type,winner,user_chips_end,robot_chips_end,hand_duration_s,action_count,avg_reaction_time_ms,robot_mode
+20260904_132048,AlbertoDiPIerro04092026,2026-09-04T13:23:05.866000,1,establishment,user,1140,860,116.3,5,22003.0,real
+20260904_132048,AlbertoDiPIerro04092026,2026-09-04T13:27:51.595000,2,bluff,user,2000,0,262.5,9,27280.0,real
+20260904_132048,AlbertoDiPIerro04092026,2026-09-04T13:31:25.585000,3,bluff_2,user,2000,0,192.0,8,22103.0,real

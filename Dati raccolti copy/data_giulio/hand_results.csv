@@ -1,0 +1,4 @@
+session_id,participant_id,timestamp,hand_number,hand_type,winner,user_chips_end,robot_chips_end,hand_duration_s,action_count,avg_reaction_time_ms,robot_mode
+20260903_155013,GIulio030926,2026-09-03T15:52:12.345000,1,establishment,user,1350,650,87.3,4,20451.0,real
+20260903_155013,GIulio030926,2026-09-03T15:53:11.283000,2,bluff,user,1236,764,34.9,2,15792.0,real
+20260903_155013,GIulio030926,2026-09-03T15:54:53.720000,3,bluff_2,user,1703,297,73.6,4,17345.0,real

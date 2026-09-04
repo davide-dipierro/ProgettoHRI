@@ -1,0 +1,4 @@
+session_id,participant_id,timestamp,hand_number,hand_type,winner,user_chips_end,robot_chips_end,hand_duration_s,action_count,avg_reaction_time_ms,robot_mode
+20260904_131024,GiulianoMaddaluno040926,2026-09-04T13:12:43.383000,1,establishment,robot,960,1040,110.3,6,17210.0,real
+20260904_131024,GiulianoMaddaluno040926,2026-09-04T13:13:51.621000,2,bluff,user,1236,764,57.3,3,18113.0,real
+20260904_131024,GiulianoMaddaluno040926,2026-09-04T13:16:43.544000,3,bluff_2,user,1719,281,144.7,8,16853.0,real

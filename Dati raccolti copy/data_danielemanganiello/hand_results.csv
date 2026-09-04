@@ -1,0 +1,4 @@
+session_id,participant_id,timestamp,hand_number,hand_type,winner,user_chips_end,robot_chips_end,hand_duration_s,action_count,avg_reaction_time_ms,robot_mode
+20260903_164929,DanieleManganiello030926,2026-09-03T16:51:28.127000,1,establishment,user,1280,720,86.0,5,15766.0,real
+20260903_164929,DanieleManganiello030926,2026-09-03T16:53:52.326000,2,bluff,user,2000,0,116.3,8,12572.0,real
+20260903_164929,DanieleManganiello030926,2026-09-03T16:55:03.069000,3,bluff_2,user,1236,764,37.5,3,11430.0,real

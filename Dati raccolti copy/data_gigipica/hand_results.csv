@@ -1,0 +1,4 @@
+session_id,participant_id,timestamp,hand_number,hand_type,winner,user_chips_end,robot_chips_end,hand_duration_s,action_count,avg_reaction_time_ms,robot_mode
+20260903_162831,GigiPica030926,2026-09-03T16:30:12.776000,1,establishment,user,1130,870,81.5,5,14701.0,real
+20260903_162831,GigiPica030926,2026-09-03T16:32:42.786000,2,bluff,user,2000,0,123.2,8,13516.0,real
+20260903_162831,GigiPica030926,2026-09-03T16:35:27.906000,3,bluff_2,user,2000,0,130.9,8,14330.0,real

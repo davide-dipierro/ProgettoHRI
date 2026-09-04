@@ -1,0 +1,4 @@
+session_id,participant_id,timestamp,hand_number,hand_type,winner,user_chips_end,robot_chips_end,hand_duration_s,action_count,avg_reaction_time_ms,robot_mode
+20260903_134817,FrancescoPio030926,2026-09-03T13:50:13.221000,1,establishment,user,1070,930,92.8,6,14522.0,real
+20260903_134817,FrancescoPio030926,2026-09-03T13:52:42.708000,2,bluff,user,2000,0,131.2,8,14500.0,real
+20260903_134817,FrancescoPio030926,2026-09-03T13:55:29.543000,3,bluff_2,user,1661,339,143.1,7,18818.0,real
